@@ -12,17 +12,14 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Colors } from '../constants/colors';
-import { Typography, Spacing, Radius, Shadow } from '../constants/theme';
+import { Feather } from '@expo/vector-icons';
 import { useBillStore } from '../store/billStore';
 import { getCategoryById } from '../constants/categories';
 import { formatCurrency } from '../utils/currencyUtils';
 import { formatDate, getDueDateLabel, isOverdue, isDueToday } from '../utils/dateUtils';
 import { BillCategoryIcon } from '../components/bills/BillCategoryIcon';
-import { Badge } from '../components/common/Badge';
-import { Card } from '../components/common/Card';
-import { PillSelector } from '../components/common/PillSelector';
 import { RootStackParamList, PaymentMethod, BillStatus } from '../types';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 type RoutePropType = RouteProp<RootStackParamList, 'BillDetail'>;
@@ -59,6 +56,23 @@ export function BillDetailScreen() {
   const category = getCategoryById(bill.categoryId);
   const status = getBillStatus(bill.isPaid, bill.dueDate);
 
+  let statusColor = '#3b82f6'; // upcoming
+  let statusIcon = 'clock';
+  let statusText = 'Upcoming';
+  if (status === 'paid') {
+    statusColor = '#10b981';
+    statusIcon = 'check-circle';
+    statusText = 'Paid';
+  } else if (status === 'overdue') {
+    statusColor = '#ef4444';
+    statusIcon = 'alert-circle';
+    statusText = 'Overdue';
+  } else if (status === 'due_today') {
+    statusColor = '#f59e0b';
+    statusIcon = 'alert-triangle';
+    statusText = 'Due Today';
+  }
+
   function handleMarkPaid() {
     markAsPaid(bill!.id, {
       paymentMethod: payMethod,
@@ -93,103 +107,129 @@ export function BillDetailScreen() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
 
-      {/* Header */}
-      <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backIcon}>←</Text>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.headerIcon} hitSlop={16}>
+          <Feather name="chevron-left" size={24} color="#0a235c" />
         </Pressable>
-        <Text style={styles.screenTitle}>Bill Details</Text>
+        <Text style={styles.title}>Bill Details</Text>
         <Pressable
           onPress={() => navigation.navigate('AddBill', { billId: bill.id })}
-          style={styles.editBtn}
+          style={styles.headerIcon}
           hitSlop={8}
         >
-          <Text style={styles.editText}>Edit</Text>
+          <Feather name="edit-2" size={20} color="#0a235c" />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Success Banner */}
         {showSuccess && (
           <View style={styles.successBanner}>
             <Text style={styles.successText}>✅ Payment recorded successfully!</Text>
           </View>
         )}
 
-        {/* Hero */}
-        <Card style={styles.heroCard} variant="dark">
+        {/* ── Hero Card ── */}
+        <View style={styles.heroCard}>
           <View style={styles.heroTop}>
-            <BillCategoryIcon categoryId={bill.categoryId} size={52} />
+            <View style={styles.iconWrap}>
+              <Feather name={category.icon as any} size={28} color="#1d4ed8" />
+            </View>
             <View style={styles.heroInfo}>
               <Text style={styles.heroName}>{bill.name}</Text>
-              <Text style={styles.heroCategory}>{category.icon} {category.name}</Text>
+              <Text style={styles.heroCategory}>{category.name}</Text>
             </View>
           </View>
-          <Text style={styles.heroAmount}>{formatCurrency(bill.amount)}</Text>
-          <View style={styles.heroBottom}>
-            <Badge status={status} size="md" />
-            <Text style={styles.heroDue}>{getDueDateLabel(bill.dueDate)}</Text>
-          </View>
-        </Card>
 
-        {/* Details */}
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Details</Text>
-          {[
-            { label: 'Due Date',   value: formatDate(bill.dueDate) },
-            { label: 'Frequency',  value: bill.frequency },
-            { label: 'Auto Repeat', value: bill.autoRepeat ? 'Yes' : 'No' },
-            { label: 'Reminders',  value: bill.reminders.join(', ') || 'None' },
-            { label: 'Payment Method', value: bill.paymentMethod ?? 'Not set' },
-          ].map(row => (
-            <View key={row.label} style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{row.label}</Text>
-              <Text style={styles.detailValue}>{row.value}</Text>
+          <Text style={styles.heroAmount}>{formatCurrency(bill.amount)}</Text>
+
+          <View style={styles.heroBottom}>
+            <View style={styles.statusRow}>
+              <Feather name={statusIcon as any} size={14} color={statusColor} />
+              <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
             </View>
-          ))}
+            <Text style={styles.heroDue}>Due: {formatDate(bill.dueDate)}</Text>
+          </View>
+        </View>
+
+        {/* ── Details Card ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Details</Text>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Frequency</Text>
+            <Text style={styles.detailValue}>{bill.frequency}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Auto Repeat</Text>
+            <Text style={styles.detailValue}>{bill.autoRepeat ? 'Yes' : 'No'}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Reminders</Text>
+            <Text style={styles.detailValue}>{bill.reminders.join(', ') || 'None'}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Payment Method</Text>
+            <Text style={styles.detailValue}>{bill.paymentMethod ?? 'Not set'}</Text>
+          </View>
+
           {bill.notes ? (
-            <View style={styles.detailRow}>
+            <View style={[styles.detailRow, { borderBottomWidth: 0, flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
               <Text style={styles.detailLabel}>Notes</Text>
-              <Text style={styles.detailValue}>{bill.notes}</Text>
+              <Text style={[styles.detailValue, { textAlign: 'left' }]}>{bill.notes}</Text>
             </View>
           ) : null}
-        </Card>
+        </View>
 
-        {/* Paid details if already paid */}
+        {/* ── Payment Info (If Paid) ── */}
         {bill.isPaid && bill.paidDate && (
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>✅ Payment Info</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Payment Info</Text>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Paid On</Text>
               <Text style={styles.detailValue}>{formatDate(bill.paidDate)}</Text>
             </View>
             {bill.transactionId && (
-              <View style={styles.detailRow}>
+              <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <Text style={styles.detailLabel}>Transaction ID</Text>
                 <Text style={styles.detailValue}>{bill.transactionId}</Text>
               </View>
             )}
-          </Card>
+          </View>
         )}
 
-        {/* Actions */}
+        {/* ── Actions ── */}
         {!bill.isPaid && (
-          <Pressable style={styles.payBtn} onPress={() => setShowPayModal(true)}>
-            <Text style={styles.payBtnText}>Mark as Paid 💳</Text>
+          <Pressable style={styles.payBtnContainer} onPress={() => setShowPayModal(true)}>
+            <View style={StyleSheet.absoluteFill}>
+              <Svg width="100%" height="100%" style={{ borderRadius: 28 }}>
+                <Defs>
+                  <LinearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="0">
+                    <Stop offset="0" stopColor="#0ea5e9" />
+                    <Stop offset="1" stopColor="#1d4ed8" />
+                  </LinearGradient>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#btnGrad)" rx="28" />
+              </Svg>
+            </View>
+            <Text style={styles.payBtnText}>Mark as Paid</Text>
           </Pressable>
         )}
 
         <Pressable style={styles.deleteBtn} onPress={handleDelete}>
-          <Text style={styles.deleteBtnText}>🗑 Delete Bill</Text>
+          <Text style={styles.deleteBtnText}>Delete Bill</Text>
         </Pressable>
 
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* Pay Modal */}
+      {/* ── Pay Modal ── */}
       <Modal visible={showPayModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
@@ -198,19 +238,26 @@ export function BillDetailScreen() {
             <Text style={styles.modalSubtitle}>{bill.name} • {formatCurrency(bill.amount)}</Text>
 
             <Text style={styles.modalLabel}>Payment Method</Text>
-            <PillSelector
-              options={METHODS}
-              selected={payMethod}
-              onSelect={m => setPayMethod(m as PaymentMethod)}
-            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
+              {METHODS.map(m => {
+                const active = payMethod === m;
+                return (
+                  <Pressable
+                    key={m}
+                    style={[styles.pill, active && styles.pillActive]}
+                    onPress={() => setPayMethod(m)}
+                  >
+                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{m}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
 
-            <Text style={[styles.modalLabel, { marginTop: Spacing.base }]}>
-              Transaction ID (Optional)
-            </Text>
+            <Text style={[styles.modalLabel, { marginTop: 16 }]}>Transaction ID (Optional)</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="e.g. UPI12345"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="#94a3b8"
               value={transId}
               onChangeText={setTransId}
             />
@@ -219,13 +266,13 @@ export function BillDetailScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Any notes..."
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="#94a3b8"
               value={payNotes}
               onChangeText={setPayNotes}
             />
 
             <Pressable style={styles.confirmBtn} onPress={handleMarkPaid}>
-              <Text style={styles.confirmBtnText}>✓ Confirm Payment</Text>
+              <Text style={styles.confirmBtnText}>Confirm Payment</Text>
             </Pressable>
 
             <Pressable
@@ -244,231 +291,289 @@ export function BillDetailScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f3f8ff',
   },
   notFound: {
     textAlign: 'center',
-    marginTop: 100,
-    color: Colors.textMuted,
-    fontSize: Typography.size.base,
+    marginTop: 10,
+    color: '#94a3b8',
+    fontSize: 10,
   },
-  topBar: {
+
+  // ── Header
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
-    paddingBottom: Spacing.md,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
-  backBtn: {
+  headerIcon: {
     width: 40,
     height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadow.sm,
   },
-  backIcon: {
-    fontSize: 22,
-    fontWeight: Typography.weight.bold,
-    color: Colors.textPrimary,
+  title: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0a235c',
   },
-  screenTitle: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
-  },
-  editBtn: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.accentLight,
-  },
-  editText: {
-    color: Colors.accent,
-    fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.bold,
-  },
+
   scroll: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
   successBanner: {
-    backgroundColor: Colors.successLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    backgroundColor: '#d1fae5', // green-100
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
     alignItems: 'center',
   },
   successText: {
-    color: Colors.success,
-    fontWeight: Typography.weight.bold,
-    fontSize: Typography.size.base,
+    color: '#059669', // green-600
+    fontWeight: '800',
+    fontSize: 13,
   },
+
+  // ── Hero Card
   heroCard: {
-    marginBottom: Spacing.base,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 15,
+    marginBottom: 20,
+    shadowColor: '#cbd5e1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    marginBottom: Spacing.md,
+    gap: 16,
+    marginBottom: 20,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 28,
+    backgroundColor: '#eff6ff', // blue-50
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroInfo: {
     flex: 1,
   },
   heroName: {
-    color: Colors.textOnDark,
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.extrabold,
+    color: '#0a235c',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 4,
   },
   heroCategory: {
-    color: Colors.textOnDarkMuted,
-    fontSize: Typography.size.sm,
-    marginTop: 4,
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '600',
   },
   heroAmount: {
-    color: Colors.textOnDark,
-    fontSize: Typography.size['4xl'],
-    fontWeight: Typography.weight.black,
-    letterSpacing: -1,
-    marginBottom: Spacing.md,
+    color: '#1d4ed8',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 20,
   },
   heroBottom: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '800',
   },
   heroDue: {
-    color: Colors.textOnDarkMuted,
-    fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.semibold,
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '700',
   },
-  section: {
-    marginBottom: Spacing.md,
+
+  // ── Card
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#cbd5e1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  sectionTitle: {
-    fontSize: Typography.size.md,
-    fontWeight: Typography.weight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0a235c',
+    marginBottom: 16,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: '#f1f5f9',
   },
   detailLabel: {
-    fontSize: Typography.size.sm,
-    color: Colors.textMuted,
-    fontWeight: Typography.weight.semibold,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   detailValue: {
-    fontSize: Typography.size.sm,
-    color: Colors.textPrimary,
-    fontWeight: Typography.weight.bold,
-    maxWidth: '60%',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0a235c',
     textAlign: 'right',
   },
-  payBtn: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.xl,
-    paddingVertical: Spacing.base + 2,
+
+  // ── Actions
+  payBtnContainer: {
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-    ...Shadow.blue,
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+    shadowColor: '#1d4ed8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   payBtnText: {
-    color: Colors.textOnDark,
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.extrabold,
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
   },
   deleteBtn: {
-    borderRadius: Radius.xl,
-    paddingVertical: Spacing.base,
+    borderRadius: 28,
+    paddingVertical: 16,
     alignItems: 'center',
-    backgroundColor: Colors.dangerLight,
-    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    backgroundColor: 'transparent',
   },
   deleteBtnText: {
-    color: Colors.danger,
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.bold,
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  // Modal
+
+  // ── Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius['3xl'],
-    borderTopRightRadius: Radius['3xl'],
-    padding: Spacing.xl,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
     paddingBottom: 40,
   },
   modalHandle: {
-    width: 40,
+    width: 48,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.border,
+    backgroundColor: '#cbd5e1',
     alignSelf: 'center',
-    marginBottom: Spacing.base,
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0a235c',
     textAlign: 'center',
     marginBottom: 4,
   },
   modalSubtitle: {
-    fontSize: Typography.size.sm,
-    color: Colors.textMuted,
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: 24,
   },
   modalLabel: {
-    fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0a235c',
+    marginBottom: 12,
   },
   modalInput: {
-    backgroundColor: Colors.surfaceAlt,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    fontSize: Typography.size.base,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 14,
+    color: '#0f172a',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  pillRow: {
+    gap: 8,
+  },
+  pill: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
+  pillActive: {
+    backgroundColor: '#1d4ed8',
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748b',
+  },
+  pillTextActive: {
+    color: '#ffffff',
   },
   confirmBtn: {
-    backgroundColor: Colors.success,
-    borderRadius: Radius.xl,
-    paddingVertical: Spacing.base,
+    backgroundColor: '#10b981', // emerald-500
+    borderRadius: 28,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginTop: Spacing.md,
+    marginTop: 8,
   },
   confirmBtnText: {
-    color: Colors.textOnDark,
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.extrabold,
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
   },
   cancelBtn: {
-    paddingVertical: Spacing.md,
+    paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 8,
   },
   cancelBtnText: {
-    color: Colors.textMuted,
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.semibold,
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

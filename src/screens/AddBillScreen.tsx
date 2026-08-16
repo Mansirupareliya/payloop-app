@@ -9,32 +9,47 @@ import {
   Alert,
   StatusBar,
   Platform,
+  Switch,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Colors } from '../constants/colors';
-import { Spacing, Radius } from '../constants/theme';
 import { useBillStore } from '../store/billStore';
 import { DEFAULT_CATEGORIES } from '../constants/categories';
-import { PillSelector } from '../components/common/PillSelector';
 import {
   RootStackParamList,
   PaymentFrequency,
   PaymentMethod,
+  ReminderOption,
 } from '../types';
 import { formatDate } from '../utils/dateUtils';
 import { formatCurrencyInput } from '../utils/currencyUtils';
+import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Circle } from 'react-native-svg';
+
+const { width, height } = Dimensions.get('window');
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 type RoutePropType = RouteProp<RootStackParamList, 'AddBill'>;
 
 const FREQUENCIES: PaymentFrequency[] = [
-  'One time', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly',
+  'One time', 'Daily', 'Weekly', 'Monthly', 'Yearly',
 ];
-const METHODS: PaymentMethod[] = [
-  'UPI', 'Cash', 'Credit Card', 'Debit Card', 'Bank Transfer', 'Other',
+
+const METHODS = [
+  { id: 'UPI', label: 'UPI', icon: 'smartphone' },
+  { id: 'Cash', label: 'Cash', icon: 'camera' }, // closest to cash/scan
+  { id: 'Credit Card', label: 'Card', icon: 'credit-card' },
+  { id: 'Bank Transfer', label: 'Bank Transfer', icon: 'home' },
+  { id: 'Other', label: 'Other', icon: 'arrow-down-circle' },
+];
+
+const REMINDERS: ReminderOption[] = [
+  '7 days before',
+  '3 days before',
+  '1 day before',
+  'On due date'
 ];
 
 export function AddBillScreen() {
@@ -45,17 +60,19 @@ export function AddBillScreen() {
   const editBill = route.params?.billId ? getBillById(route.params.billId) : undefined;
   const isEditing = !!editBill;
 
-  const [name,       setName]       = useState(editBill?.name ?? '');
+  const [name, setName] = useState(editBill?.name ?? '');
   const [categoryId, setCategoryId] = useState(editBill?.categoryId ?? 'electricity');
-  const [amount,     setAmount]     = useState(editBill ? String(editBill.amount) : '');
-  
-  // Date Picker State
+  const [amount, setAmount] = useState(editBill ? String(editBill.amount) : '');
+
   const initialDate = editBill?.dueDate ? new Date(editBill.dueDate) : new Date();
   const [dueDateObj, setDueDateObj] = useState(initialDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  const [frequency,  setFrequency]  = useState<PaymentFrequency>(editBill?.frequency ?? 'Monthly');
-  const [method,     setMethod]     = useState<PaymentMethod>(editBill?.paymentMethod ?? 'Bank Transfer');
+
+  const [frequency, setFrequency] = useState<PaymentFrequency>(editBill?.frequency ?? 'Monthly');
+  const [method, setMethod] = useState<PaymentMethod>(editBill?.paymentMethod ?? 'UPI');
+  const [autoRepeat, setAutoRepeat] = useState(editBill?.autoRepeat ?? true);
+  const [reminder, setReminder] = useState(editBill?.reminders?.[0] ?? '7 days before');
+  const [notes, setNotes] = useState(editBill?.notes ?? '');
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -69,7 +86,7 @@ export function AddBillScreen() {
       Alert.alert('Missing Info', 'Please enter a bill name.');
       return;
     }
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = parseFloat(amount.replace(/,/g, ''));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Missing Info', 'Please enter a valid amount.');
       return;
@@ -81,10 +98,10 @@ export function AddBillScreen() {
       amount: parsedAmount,
       dueDate: dueDateObj.toISOString(),
       frequency,
-      autoRepeat: false, // Removed auto repeat from UI, defaulting to false
-      reminders: ['3 days before'] as any, // Kept default reminder internally
+      autoRepeat,
+      reminders: [reminder] as any,
       paymentMethod: method,
-      notes: '', // Removed from UI to simplify classic form
+      notes: notes.trim(),
     };
 
     if (isEditing && editBill) {
@@ -95,122 +112,176 @@ export function AddBillScreen() {
     navigation.goBack();
   }
 
+  const selectedCategory = DEFAULT_CATEGORIES.find(c => c.id === categoryId) || DEFAULT_CATEGORIES[0];
+
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header */}
-      <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={16}>
-          <Feather name="chevron-left" size={28} color={Colors.textPrimary} />
+
+
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.headerIcon} hitSlop={16}>
+          <Feather name="chevron-left" size={24} color="#0a235c" />
         </Pressable>
-        <Text style={styles.screenTitle}>{isEditing ? 'Edit Bill' : 'New Bill'}</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.title}>{isEditing ? 'Edit Bill' : 'Add New Bill'}</Text>
+        <View style={styles.headerIcon} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Large Amount Input */}
-        <View style={styles.amountContainer}>
-          <Text style={styles.amountLabel}>Amount</Text>
-          <View style={styles.amountRow}>
-            <Text style={styles.currencySymbol}>₹</Text>
+        {/* Bill Name */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Bill Name</Text>
+          <View style={styles.glassInput}>
             <TextInput
-              style={styles.amountInput}
-              placeholder="0.00"
-              placeholderTextColor={Colors.textMuted}
-              value={amount}
-              onChangeText={t => setAmount(formatCurrencyInput(t))}
-              keyboardType="numeric"
-              maxLength={10}
-            />
-          </View>
-        </View>
-
-        {/* Bill Details Form - Classic Professional Style */}
-        <View style={styles.formSection}>
-          
-          <View style={styles.inputWrap}>
-            <Text style={styles.label}>Bill Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Internet Bill"
-              placeholderTextColor={Colors.textMuted}
+              style={styles.textInput}
+              placeholder="e.g. Electricity Bill"
+              placeholderTextColor="#94a3b8"
               value={name}
               onChangeText={setName}
             />
           </View>
-
-          <View style={styles.inputWrap}>
-            <Text style={styles.label}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
-              {DEFAULT_CATEGORIES.map(cat => (
-                <Pressable
-                  key={cat.id}
-                  style={[styles.catChip, categoryId === cat.id && styles.catChipActive]}
-                  onPress={() => setCategoryId(cat.id)}
-                >
-                  <Text style={[styles.catChipText, categoryId === cat.id && styles.catChipTextActive]}>
-                    {cat.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.inputWrap}>
-            <Text style={styles.label}>Due Date</Text>
-            <Pressable 
-              style={styles.dateInputContainer} 
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateText}>
-                {formatDate(dueDateObj.toISOString())}
-              </Text>
-              <Feather name="calendar" size={20} color={Colors.textSecondary} />
-            </Pressable>
-            {showDatePicker && (
-              <DateTimePicker
-                value={dueDateObj}
-                mode="date"
-                display="default"
-                onChange={onDateChange}
-              />
-            )}
-          </View>
-
-          <View style={styles.inputWrap}>
-            <Text style={styles.label}>Payment Frequency</Text>
-            <PillSelector
-              options={FREQUENCIES}
-              selected={frequency}
-              onSelect={f => setFrequency(f as PaymentFrequency)}
-            />
-          </View>
-
-          <View style={styles.inputWrap}>
-            <Text style={styles.label}>Payment Method</Text>
-            <PillSelector
-              options={METHODS}
-              selected={method}
-              onSelect={m => setMethod(m as PaymentMethod)}
-            />
-          </View>
-
         </View>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+        {/* Category */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Category</Text>
+          <Pressable style={styles.glassInputRow}>
+            <Feather name={selectedCategory.icon as any} size={18} color="#1d4ed8" style={styles.inputIcon} />
+            <Text style={styles.inputText}>{selectedCategory.name}</Text>
+            <Feather name="chevron-down" size={18} color="#0a235c" />
+          </Pressable>
+        </View>
 
-      {/* Floating Action Button at Bottom */}
-      <View style={styles.bottomBar}>
-        <Pressable style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>
-            {isEditing ? 'Update Bill' : 'Confirm'}
-          </Text>
-          <Feather name="check" size={20} color={Colors.textOnDark} />
+        {/* Amount */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Amount</Text>
+          <View style={styles.glassInputRow}>
+            <Text style={styles.currencySymbol}>₹</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="0"
+              placeholderTextColor="#94a3b8"
+              value={amount}
+              onChangeText={t => setAmount(formatCurrencyInput(t))}
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
+
+        {/* Due Date */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Due Date</Text>
+          <Pressable style={styles.glassInputRow} onPress={() => setShowDatePicker(true)}>
+            <Feather name="calendar" size={18} color="#0a235c" style={styles.inputIcon} />
+            <Text style={styles.inputText}>
+              {formatDate(dueDateObj.toISOString())}
+            </Text>
+            <Feather name="calendar" size={18} color="#0a235c" />
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={dueDateObj}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+            />
+          )}
+        </View>
+
+        {/* Payment Frequency */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Payment Frequency</Text>
+          <View style={styles.glassInputRow}>
+            <Text style={styles.inputText}>{frequency}</Text>
+            <Feather name="chevron-down" size={18} color="#0a235c" />
+          </View>
+        </View>
+
+        {/* Auto repeat */}
+        <View style={[styles.inputWrap, styles.rowBetween]}>
+          <Text style={styles.label}>Auto repeat</Text>
+          <Switch
+            value={autoRepeat}
+            onValueChange={setAutoRepeat}
+            trackColor={{ false: '#cbd5e1', true: '#1d4ed8' }}
+            thumbColor={'#ffffff'}
+          />
+        </View>
+
+        {/* Reminder */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Reminder</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
+            {REMINDERS.map(rem => {
+              const active = reminder === rem;
+              return (
+                <Pressable
+                  key={rem}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => setReminder(rem)}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{rem}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Payment Method */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Payment Method</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.methodRow}>
+            {METHODS.map(m => {
+              const active = method === m.id;
+              return (
+                <Pressable
+                  key={m.id}
+                  style={[styles.methodBox, active && styles.methodBoxActive]}
+                  onPress={() => setMethod(m.id as PaymentMethod)}
+                >
+                  <Feather name={m.icon as any} size={22} color={active ? '#ffffff' : '#0a235c'} />
+                  <Text style={[styles.methodText, active && styles.methodTextActive]}>{m.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Notes */}
+        <View style={styles.inputWrap}>
+          <Text style={styles.label}>Notes (Optional)</Text>
+          <View style={styles.glassInput}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Electricity meter no..."
+              placeholderTextColor="#94a3b8"
+              value={notes}
+              onChangeText={setNotes}
+            />
+          </View>
+        </View>
+
+        {/* Submit Button */}
+        <Pressable style={styles.submitBtnContainer} onPress={handleSave}>
+          <View style={StyleSheet.absoluteFill}>
+            <Svg width="100%" height="100%" style={{ borderRadius: 28 }}>
+              <Defs>
+                <LinearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0" stopColor="#0ea5e9" />
+                  <Stop offset="1" stopColor="#1d4ed8" />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#btnGrad)" rx="28" />
+            </Svg>
+          </View>
+          <Text style={styles.submitBtnText}>{isEditing ? 'Update Bill' : 'Add Bill'}</Text>
         </Pressable>
-      </View>
+
+        <View style={{ height: 60 }} />
+      </ScrollView>
     </View>
   );
 }
@@ -218,153 +289,149 @@ export function AddBillScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: Colors.surface, // Pure white background
+    backgroundColor: '#f3f8ff',
   },
-  topBar: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: 56,
-    paddingBottom: Spacing.md,
-    backgroundColor: Colors.surface,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 16,
   },
-  backBtn: {
+  headerIcon: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  screenTitle: {
+  title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '800',
+    color: '#0a235c',
   },
   scroll: {
-    paddingTop: Spacing.md,
-  },
-  amountContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    marginBottom: Spacing.xl,
-  },
-  amountLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  currencySymbol: {
-    fontSize: 42,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginRight: 4,
-    marginBottom: 4,
-  },
-  amountInput: {
-    fontSize: 56,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    minWidth: 120,
-    textAlign: 'center',
-  },
-  formSection: {
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
   inputWrap: {
-    marginBottom: Spacing.xl,
+    marginBottom: 10,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.surface,
-  },
-  dateInputContainer: {
+  rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0a235c',
+    marginBottom: 8,
+  },
+  glassInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
-    backgroundColor: Colors.surface,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
   },
-  dateText: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  catScroll: {
-    marginHorizontal: -Spacing.xs,
-  },
-  catChip: {
+  glassInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginRight: Spacing.sm,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
-  catChipActive: {
-    backgroundColor: Colors.primaryGlow,
-    borderColor: Colors.primary,
+  textInput: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0f172a',
   },
-  catChipText: {
+  inputText: {
+    flex: 1,
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    fontWeight: '800',
+    color: '#0f172a',
   },
-  catChipTextActive: {
-    color: Colors.primary,
-    fontWeight: '700',
+  inputIcon: {
+    marginRight: 10,
   },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: Spacing.xl,
-    paddingBottom: 40,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginRight: 8,
   },
-  saveBtn: {
-    backgroundColor: Colors.primaryDark,
-    flexDirection: 'row',
-    borderRadius: Radius.lg,
-    paddingVertical: 18,
+  pillRow: {
+    gap: 4,
+  },
+  pill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  pillActive: {
+    backgroundColor: '#3b82f6', // blue
+    borderColor: '#3b82f6',
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0a235c',
+  },
+  pillTextActive: {
+    color: '#ffffff',
+  },
+  methodRow: {
+    gap: 12,
+  },
+  methodBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    width: 72,
+    height: 72,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  saveBtnText: {
-    color: Colors.textOnDark,
+  methodBoxActive: {
+    backgroundColor: '#1d4ed8',
+    borderColor: '#1d4ed8',
+  },
+  methodText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0a235c',
+  },
+  methodTextActive: {
+    color: '#ffffff',
+  },
+  submitBtnContainer: {
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    shadowColor: '#1d4ed8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  submitBtnText: {
     fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    color: '#ffffff',
   },
 });

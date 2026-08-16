@@ -7,13 +7,14 @@ import { BottomTabNavigator } from './src/navigation/BottomTabNavigator';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { AddBillScreen } from './src/screens/AddBillScreen';
 import { BillDetailScreen } from './src/screens/BillDetailScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { RootStackParamList } from './src/types';
 import { useAuthStore } from './src/store/authStore';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function App() {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, checkAuth, hasCompletedOnboarding } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
@@ -39,6 +40,9 @@ export default function App() {
               gestureEnabled: true,
             }}
           >
+            {!hasCompletedOnboarding && (
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            )}
             <Stack.Screen name="MainTabs"   component={BottomTabNavigator} />
             <Stack.Screen name="AddBill"    component={AddBillScreen} />
             <Stack.Screen name="BillDetail" component={BillDetailScreen} />

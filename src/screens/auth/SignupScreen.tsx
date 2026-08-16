@@ -9,15 +9,25 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { AuthStackParamList } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 
 type SignupScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Signup'>;
+
+// ─── Color constants ──────────────────────────────────────────────────────────
+const C = {
+  deepNavy:  '#001B48',
+  darkBlue:  '#02457A',
+  primary:   '#018ABE',
+  lightBlue: '#97CADB',
+  paleBlue:  '#D6E8EE',
+  white:     '#FFFFFF',
+};
 
 export const SignupScreen = () => {
   const navigation = useNavigation<SignupScreenNavigationProp>();
@@ -29,10 +39,11 @@ export const SignupScreen = () => {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const handleSignup = async () => {
     setError('');
-
     if (!email || !password) {
       setError('Email and password are required.');
       return;
@@ -45,11 +56,9 @@ export const SignupScreen = () => {
       setError('Password must be at least 6 characters.');
       return;
     }
-
     setLoading(true);
     try {
       await signup(email, password, phone || undefined);
-      // Navigate to Congratulations — do NOT auto-login
       navigation.navigate('Congratulations');
     } catch (err: any) {
       setError(err.message || 'Signup failed. Please try again.');
@@ -60,95 +69,128 @@ export const SignupScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      <StatusBar barStyle="light-content" backgroundColor={C.deepNavy} />
+
+      {/* ── Compact dark header ── */}
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <FontAwesome5 name="leaf" size={60} color="#0d5c56" style={styles.leafIcon} />
-        </View>
+        <View style={styles.circleTopRight} />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={20} color={C.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Account</Text>
+        <Text style={styles.headerSub}>Join PayLoop — it's free</Text>
       </View>
 
-      {/* Form Card */}
+      {/* ── Form card ── */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.formContainer}
+        style={styles.formWrapper}
       >
         <View style={styles.card}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <FontAwesome5 name="arrow-left" size={14} color="#0f766e" />
-            <Text style={styles.backButtonText}>Back to login</Text>
-          </TouchableOpacity>
-
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.cardTitle}>Sign Up</Text>
 
-            {/* Error Message */}
+            {/* Error */}
             {error ? (
               <View style={styles.errorBox}>
-                <FontAwesome5 name="exclamation-circle" size={14} color="#dc2626" />
+                <Feather name="alert-circle" size={14} color="#dc2626" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="envelope" size={16} color="#a0a0a0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#a0a0a0"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <View style={styles.inputRow}>
+                <Feather name="mail" size={16} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="lock" size={16} color="#a0a0a0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#a0a0a0"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.inputRow}>
+                <Feather name="lock" size={16} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Create a password"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPass}
+                />
+                <TouchableOpacity onPress={() => setShowPass(p => !p)} style={styles.eyeBtn}>
+                  <Feather name={showPass ? 'eye' : 'eye-off'} size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="lock" size={16} color="#a0a0a0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#a0a0a0"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-              />
+            {/* Confirm Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <View style={styles.inputRow}>
+                <Feather name="lock" size={16} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Repeat your password"
+                  placeholderTextColor="#9CA3AF"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPass}
+                />
+                <TouchableOpacity onPress={() => setShowConfirmPass(p => !p)} style={styles.eyeBtn}>
+                  <Feather name={showConfirmPass ? 'eye' : 'eye-off'} size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="mobile-alt" size={18} color="#a0a0a0" style={[styles.inputIcon, { marginLeft: 2 }]} />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone (optional)"
-                placeholderTextColor="#a0a0a0"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
+            {/* Phone */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Phone (optional)</Text>
+              <View style={styles.inputRow}>
+                <Feather name="phone" size={16} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your phone number"
+                  placeholderTextColor="#9CA3AF"
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
             </View>
 
+            {/* Sign Up Button */}
             <TouchableOpacity
-              style={[styles.signupButton, loading && styles.signupButtonDisabled]}
+              style={[styles.signupBtn, loading && styles.signupBtnDisabled]}
               onPress={handleSignup}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#ffffff" />
+                <ActivityIndicator color={C.white} />
               ) : (
-                <Text style={styles.signupButtonText}>Sign Up</Text>
+                <Text style={styles.signupBtnText}>Create Account</Text>
               )}
             </TouchableOpacity>
+
+            {/* Login link */}
+            <View style={styles.loginRow}>
+              <Text style={styles.loginText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Text style={styles.loginLink}>Login</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ height: 24 }} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -159,51 +201,70 @@ export const SignupScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f766e',
+    backgroundColor: C.deepNavy,
   },
+
+  // ── Header
   header: {
-    paddingTop: 60,
-    paddingHorizontal: 30,
-    height: 120,
+    paddingTop: 56,
+    paddingHorizontal: 28,
+    paddingBottom: 28,
     position: 'relative',
+    overflow: 'hidden',
   },
-  logoContainer: {
+  circleTopRight: {
     position: 'absolute',
-    top: 40,
-    left: -20,
-    opacity: 0.8,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: C.darkBlue,
+    top: -50,
+    right: -40,
+    opacity: 0.6,
   },
-  leafIcon: {
-    transform: [{ rotate: '-45deg' }],
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
   },
-  formContainer: {
+  headerTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: C.white,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  headerSub: {
+    fontSize: 13,
+    color: C.lightBlue,
+    fontWeight: '400',
+  },
+
+  // ── Card
+  formWrapper: {
     flex: 1,
   },
   card: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    paddingHorizontal: 30,
-    paddingTop: 25,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButtonText: {
-    marginLeft: 8,
-    color: '#0f766e',
-    fontSize: 14,
-    fontWeight: '600',
+    backgroundColor: C.white,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingHorizontal: 28,
+    paddingTop: 28,
   },
   cardTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#0f766e',
-    marginBottom: 24,
+    fontSize: 22,
+    fontWeight: '800',
+    color: C.deepNavy,
+    marginBottom: 16,
+    letterSpacing: -0.5,
   },
+
+  // Error
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -212,9 +273,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecaca',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
   },
   errorText: {
     flex: 1,
@@ -222,41 +283,79 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  inputContainer: {
+
+  // Input
+  inputGroup: {
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    marginBottom: 15,
-    height: 55,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    height: 52,
   },
   inputIcon: {
     marginRight: 10,
-    width: 20,
-    textAlign: 'center',
   },
   input: {
     flex: 1,
-    height: '100%',
-    color: '#333',
-    fontSize: 16,
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '500',
   },
-  signupButton: {
-    backgroundColor: '#0f766e',
-    borderRadius: 25,
-    height: 55,
+  eyeBtn: {
+    padding: 4,
+  },
+
+  // Signup button
+  signupBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 14,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 30,
+    marginTop: 8,
+    marginBottom: 20,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  signupButtonDisabled: {
+  signupBtnDisabled: {
     opacity: 0.7,
   },
-  signupButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  signupBtnText: {
+    color: C.white,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  // Login
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginText: {
+    color: C.lightBlue,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loginLink: {
+    color: C.primary,
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

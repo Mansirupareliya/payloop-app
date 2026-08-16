@@ -19,6 +19,8 @@ interface AuthState {
   signup: (email: string, password: string, phone?: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  hasCompletedOnboarding: boolean;
+  completeOnboarding: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -28,6 +30,11 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isLoading: true, // Start true for initial check
+      hasCompletedOnboarding: false,
+
+      completeOnboarding: () => {
+        set({ hasCompletedOnboarding: true });
+      },
 
       login: async (email, password) => {
         try {

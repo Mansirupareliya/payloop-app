@@ -1,61 +1,65 @@
 export const Colors = {
-  // Primary Brand (Dark Blue from Mockup)
-  primary: '#02589B',       
-  primaryLight: '#0372C7',  
-  primaryDark: '#013D6E',   
-  primaryGlow: '#E8F2FA',   
+  // ─── Brand Blues (from design palette) ───────────────────────────────────────
+  deepNavy:      '#001B48',   // Darkest — headers, dark sections
+  darkBlue:      '#02457A',   // Dark — gradients, nav bg
+  primary:       '#018ABE',   // Primary — buttons, highlights, icons
+  lightBlue:     '#97CADB',   // Light — soft accents, tags, borders
+  paleBlue:      '#D6E8EE',   // Lightest — backgrounds, card tints
 
-  // Accent
-  accent: '#02589B',        
-  accentLight: '#F4F8FB',   
+  // Aliases for existing code compatibility
+  primaryLight:  '#97CADB',
+  primaryDark:   '#02457A',
+  primaryGlow:   '#EAF4F8',
+  accent:        '#018ABE',
+  accentLight:   '#EAF4F8',
 
-  // Semantic
-  success: '#10B981',
-  successLight: '#D1FAE5',
-  warning: '#F59E0B',
-  warningLight: '#FEF3C7',
-  danger: '#EF4444',
-  dangerLight: '#FEE2E2',
-  info: '#02589B',
-  infoLight: '#E8F2FA',
+  // ─── Semantic ─────────────────────────────────────────────────────────────────
+  success:       '#10B981',
+  successLight:  '#D1FAE5',
+  warning:       '#F59E0B',
+  warningLight:  '#FEF3C7',
+  danger:        '#EF4444',
+  dangerLight:   '#FEE2E2',
+  info:          '#018ABE',
+  infoLight:     '#D6E8EE',
 
-  // Neutral (Backgrounds)
-  background: '#FAFCFF',    
-  surface: '#FFFFFF',       
-  surfaceAlt: '#F4F8FB',    
-  border: '#E5E7EB',        
-  borderLight: '#F3F4F6',   
+  // ─── Backgrounds ──────────────────────────────────────────────────────────────
+  background:    '#F4F9FC',   // App bg — very light blue-white
+  surface:       '#FFFFFF',
+  surfaceAlt:    '#EAF4F8',
+  border:        '#D6E8EE',
+  borderLight:   '#EAF4F8',
 
-  // Text
-  textPrimary: '#111827',   
-  textSecondary: '#6B7280', 
-  textMuted: '#9CA3AF',     
-  textOnDark: '#FFFFFF',
-  textOnDarkMuted: '#E8F2FA',
+  // ─── Text ─────────────────────────────────────────────────────────────────────
+  textPrimary:   '#001B48',   // Use deep navy for primary text
+  textSecondary: '#02457A',
+  textMuted:     '#97CADB',
+  textOnDark:    '#FFFFFF',
+  textOnDarkMuted: '#D6E8EE',
 
-  // Gradients
-  gradientPrimary: ['#02589B', '#013D6E'],
+  // ─── Gradients ────────────────────────────────────────────────────────────────
+  gradientPrimary: ['#018ABE', '#02457A'],
+  gradientDark:    ['#001B48', '#02457A'],
+  gradientLight:   ['#97CADB', '#D6E8EE'],
   gradientSuccess: ['#10B981', '#059669'],
   gradientWarning: ['#F59E0B', '#D97706'],
-  gradientDanger: ['#EF4444', '#DC2626'],
-  gradientCard: ['#02589B', '#0372C7'],
+  gradientDanger:  ['#EF4444', '#DC2626'],
+  gradientCard:    ['#018ABE', '#02457A'],
 
-  // Categories 
-  catRent: '#8B5CF6',
-  catElectricity: '#F59E0B',
-  catWater: '#0EA5E9',
-  catGas: '#EF4444',
-  catMobile: '#10B981',
-  catInternet: '#6366F1',
-  catCreditCard: '#EAB308',
-  catLoan: '#F97316',
-  catInsurance: '#14B8A6',
+  // ─── Category Colors ──────────────────────────────────────────────────────────
+  catRent:          '#8B5CF6',
+  catElectricity:   '#F59E0B',
+  catWater:         '#018ABE',
+  catGas:           '#EF4444',
+  catMobile:        '#10B981',
+  catInternet:      '#02457A',
+  catCreditCard:    '#EAB308',
+  catLoan:          '#F97316',
+  catInsurance:     '#14B8A6',
   catEntertainment: '#A855F7',
-  catEducation: '#3B82F6',
-  catVehicle: '#64748B',
-  catMaintenance: '#78716C',
-  catShopping: '#F43F5E',
-  catOther: '#9CA3AF',
+  catEducation:     '#3B82F6',
+  catVehicle:       '#64748B',
+  catMaintenance:   '#78716C',
+  catShopping:      '#F43F5E',
+  catOther:         '#97CADB',
 } as const;
-
-

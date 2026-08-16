@@ -103,6 +103,7 @@ export type AuthStackParamList = {
 };
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   MainTabs: undefined;
   AddBill: { billId?: string };
   BillDetail: { billId: string };
@@ -112,7 +113,8 @@ export type BottomTabParamList = {
   Home: undefined;
   Bills: undefined;
   Calendar: undefined;
-  More: undefined;
+  Analytics: undefined;
+  Profile: undefined;
 };
 
 export type MoreStackParamList = {

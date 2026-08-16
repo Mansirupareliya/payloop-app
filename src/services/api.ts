@@ -10,10 +10,10 @@ async function request<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  
+
   // Get token from authStore directly
   const token = useAuthStore.getState().token;
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };

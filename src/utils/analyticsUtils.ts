@@ -4,9 +4,9 @@ import { isOverdue, isDueSoon, isDueToday } from './dateUtils';
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
-export function getDashboardStats(bills: Bill[], payments: Payment[]) {
+export function getDashboardStats(bills: Bill[], payments: Payment[], targetMonth?: string) {
   const now = new Date();
-  const currentMonth = format(now, 'yyyy-MM');
+  const currentMonth = targetMonth || format(now, 'yyyy-MM');
 
   const currentMonthBills = bills.filter(b =>
     b.dueDate.startsWith(currentMonth)
@@ -66,9 +66,9 @@ export function getMonthlySpending(bills: Bill[], months = 6): MonthlySpending[]
 
 // ─── Category Breakdown ───────────────────────────────────────────────────────
 
-export function getCategorySpending(bills: Bill[]): CategorySpending[] {
+export function getCategorySpending(bills: Bill[], targetMonth?: string): CategorySpending[] {
   const now = new Date();
-  const currentMonth = format(now, 'yyyy-MM');
+  const currentMonth = targetMonth || format(now, 'yyyy-MM');
   const monthBills = bills.filter(b => b.dueDate.startsWith(currentMonth));
 
   const byCategory: Record<string, number> = {};
@@ -89,9 +89,9 @@ export function getCategorySpending(bills: Bill[]): CategorySpending[] {
 
 // ─── Budget Usage ────────────────────────────────────────────────────────────
 
-export function getBudgetUsage(bills: Bill[], budget: number): { spent: number; remaining: number; percent: number } {
+export function getBudgetUsage(bills: Bill[], budget: number, targetMonth?: string): { spent: number; remaining: number; percent: number } {
   const now = new Date();
-  const currentMonth = format(now, 'yyyy-MM');
+  const currentMonth = targetMonth || format(now, 'yyyy-MM');
   const spent = bills
     .filter(b => b.dueDate.startsWith(currentMonth))
     .reduce((s, b) => s + b.amount, 0);

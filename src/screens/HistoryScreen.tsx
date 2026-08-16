@@ -4,23 +4,31 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Pressable,
   StatusBar,
+  Pressable,
+  Modal,
 } from 'react-native';
-import { Colors } from '../constants/colors';
-import { Typography, Spacing, Radius, Shadow } from '../constants/theme';
+import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useBillStore } from '../store/billStore';
 import { formatCurrency } from '../utils/currencyUtils';
-import { formatDate, formatMonthYear } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
 import { getCategoryById } from '../constants/categories';
-import { BillCategoryIcon } from '../components/bills/BillCategoryIcon';
-import { EmptyState } from '../components/common/EmptyState';
-import { Card } from '../components/common/Card';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, setYear, setMonth } from 'date-fns';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function HistoryScreen() {
+  const navigation = useNavigation();
   const { payments } = useBillStore();
-  const [filter, setFilter] = useState<'all' | string>('all');
+
+  // Selected date state
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(selectedDate.getFullYear());
+
+  const displayMonthLabel = format(selectedDate, 'MMMM yyyy');
+  const filterMonthKey = format(selectedDate, 'MMMM yyyy');
 
   // Group payments by month
   const grouped: Record<string, typeof payments> = {};
@@ -32,81 +40,126 @@ export function HistoryScreen() {
     } catch { /* skip */ }
   }
 
-  const months = Object.keys(grouped).sort((a, b) => {
-    const da = new Date(a);
-    const db = new Date(b);
-    return db.getTime() - da.getTime();
-  });
+  // Get payments for the selected month only
+  const monthPayments = grouped[filterMonthKey] || [];
+  const monthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
+
+  const handleSelectMonth = (monthIndex: number) => {
+    let newDate = setYear(new Date(), pickerYear);
+    newDate = setMonth(newDate, monthIndex);
+    setSelectedDate(newDate);
+    setShowPicker(false);
+  };
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
 
-      <View style={styles.topBar}>
-        <Text style={styles.title}>Payment History</Text>
-        <Text style={styles.subtitle}>{payments.length} payments recorded</Text>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={16}>
+          <Feather name="chevron-left" size={24} color="#0a235c" />
+        </Pressable>
+        <Text style={styles.title}>History</Text>
+
+        <Pressable style={styles.monthButton} onPress={() => {
+          setPickerYear(selectedDate.getFullYear());
+          setShowPicker(true);
+        }}>
+          <Feather name="calendar" size={16} color="#0a235c" />
+          <Text style={styles.monthButtonText}>{displayMonthLabel}</Text>
+          <Feather name="chevron-down" size={16} color="#0a235c" />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {payments.length === 0 ? (
-          <EmptyState
-            emoji="📜"
-            title="No payment history yet"
-            subtitle="Your paid bills will appear here"
-          />
+        {monthPayments.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No payment history.</Text>
+            <Text style={styles.emptySubText}>No bills were paid in {displayMonthLabel}.</Text>
+          </View>
         ) : (
-          months.map(month => {
-            const monthPayments = grouped[month];
-            const monthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
+          <View style={styles.monthCard}>
+            {/* Month Header */}
+            <View style={styles.monthHeader}>
+              <Text style={styles.monthTitle}>{filterMonthKey}</Text>
+              <Text style={styles.monthTotal}>{formatCurrency(monthTotal)}</Text>
+            </View>
 
-            return (
-              <Card key={month} style={styles.monthCard}>
-                {/* Month Header */}
-                <View style={styles.monthHeader}>
-                  <Text style={styles.monthTitle}>{month}</Text>
-                  <Text style={styles.monthTotal}>{formatCurrency(monthTotal)}</Text>
-                </View>
+            {/* Payment Rows */}
+            {monthPayments.map((p, idx, arr) => {
+              const cat = getCategoryById(p.categoryId);
+              return (
+                <View key={p.id} style={[styles.payRow, idx === arr.length - 1 && { borderBottomWidth: 0 }]}>
+                  <View style={[styles.catIconWrap, { backgroundColor: cat.color || '#eff6ff' }]}>
+                    <Feather name={cat.icon as any} size={20} color="#fff" />
+                  </View>
 
-                {/* Payment Rows */}
-                {monthPayments.map(p => {
-                  const cat = getCategoryById(p.categoryId);
-                  return (
-                    <View key={p.id} style={styles.payRow}>
-                      <BillCategoryIcon categoryId={p.categoryId} size={40} />
-                      <View style={styles.payInfo}>
-                        <Text style={styles.payName}>{p.billName}</Text>
-                        <Text style={styles.payMeta}>
-                          {cat.name} • {p.paymentMethod}
-                        </Text>
-                        <Text style={styles.payDate}>{formatDate(p.paidDate)}</Text>
-                      </View>
-                      <View style={styles.payRight}>
-                        <Text style={styles.payAmount}>{formatCurrency(p.amount)}</Text>
-                        <View style={styles.paidBadge}>
-                          <Text style={styles.paidBadgeText}>✓ Paid</Text>
-                        </View>
-                      </View>
+                  <View style={styles.payInfo}>
+                    <Text style={styles.payName}>{p.billName}</Text>
+                    <Text style={styles.payMeta}>
+                      {cat.name} • {p.paymentMethod}
+                    </Text>
+                    <Text style={styles.payDate}>{formatDate(p.paidDate)}</Text>
+                  </View>
+
+                  <View style={styles.payRight}>
+                    <Text style={styles.payAmount}>{formatCurrency(p.amount)}</Text>
+                    <View style={styles.paidBadge}>
+                      <Text style={styles.paidBadgeText}>✓ Paid</Text>
                     </View>
-                  );
-                })}
-
-                {/* Month Footer */}
-                <View style={styles.monthFooter}>
-                  <Text style={styles.monthFooterText}>
-                    {monthPayments.length} payment{monthPayments.length !== 1 ? 's' : ''}
-                  </Text>
-                  <Text style={styles.monthFooterTotal}>
-                    Total: {formatCurrency(monthTotal)}
-                  </Text>
+                  </View>
                 </View>
-              </Card>
-            );
-          })
+              );
+            })}
+
+            {/* Month Footer */}
+            <View style={styles.monthFooter}>
+              <Text style={styles.monthFooterText}>
+                {monthPayments.length} payment{monthPayments.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          </View>
         )}
 
-        <View style={{ height: 90 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* ── Month/Year Picker Modal ── */}
+      <Modal visible={showPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowPicker(false)}>
+          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
+            {/* Year Selector */}
+            <View style={styles.yearRow}>
+              <Pressable onPress={() => setPickerYear(y => y - 1)} style={styles.yearBtn}>
+                <Feather name="chevron-left" size={24} color="#0a235c" />
+              </Pressable>
+              <Text style={styles.yearText}>{pickerYear}</Text>
+              <Pressable onPress={() => setPickerYear(y => y + 1)} style={styles.yearBtn}>
+                <Feather name="chevron-right" size={24} color="#0a235c" />
+              </Pressable>
+            </View>
+
+            {/* Months Grid */}
+            <View style={styles.monthGrid}>
+              {MONTHS.map((m, index) => {
+                const isSelected = selectedDate.getMonth() === index && selectedDate.getFullYear() === pickerYear;
+                return (
+                  <Pressable
+                    key={m}
+                    style={[styles.monthBox, isSelected && styles.monthBoxSelected]}
+                    onPress={() => handleSelectMonth(index)}
+                  >
+                    <Text style={[styles.monthBoxText, isSelected && styles.monthBoxTextSelected]}>{m}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
     </View>
   );
 }
@@ -114,115 +167,217 @@ export function HistoryScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f3f8ff',
   },
-  topBar: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
-    paddingBottom: Spacing.md,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 16,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: Typography.size['2xl'],
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0a235c',
   },
-  subtitle: {
-    fontSize: Typography.size.sm,
-    color: Colors.textMuted,
-    marginTop: 2,
+  monthButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  monthButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0a235c',
   },
   scroll: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
+
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 80,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0a235c',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+
   monthCard: {
-    marginBottom: Spacing.base,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
     padding: 0,
+    marginBottom: 20,
+    shadowColor: '#cbd5e1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
     overflow: 'hidden',
   },
   monthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.primaryDark,
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
+    backgroundColor: '#1d4ed8',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   monthTitle: {
-    color: Colors.textOnDark,
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.extrabold,
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
   },
   monthTotal: {
-    color: Colors.textOnDarkMuted,
-    fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.semibold,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '700',
   },
   payRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    gap: Spacing.md,
+    borderBottomColor: '#f1f5f9',
+    gap: 16,
+  },
+  catIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   payInfo: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   payName: {
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.bold,
-    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0a235c',
   },
   payMeta: {
-    fontSize: Typography.size.xs,
-    color: Colors.textMuted,
-    fontWeight: Typography.weight.medium,
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '700',
   },
   payDate: {
-    fontSize: Typography.size.xs,
-    color: Colors.textMuted,
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '600',
   },
   payRight: {
     alignItems: 'flex-end',
-    gap: 4,
+    gap: 6,
   },
   payAmount: {
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1d4ed8',
   },
   paidBadge: {
-    backgroundColor: Colors.successLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
+    backgroundColor: '#d1fae5', // green-100
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   paidBadgeText: {
-    color: Colors.success,
+    color: '#059669', // green-600
     fontSize: 10,
-    fontWeight: Typography.weight.bold,
+    fontWeight: '800',
   },
   monthFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.surfaceAlt,
-    borderBottomLeftRadius: Radius.xl,
-    borderBottomRightRadius: Radius.xl,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
   },
   monthFooterText: {
-    color: Colors.textMuted,
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.medium,
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
   },
-  monthFooterTotal: {
-    color: Colors.textPrimary,
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.bold,
+
+  // ── Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  yearRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  yearBtn: {
+    padding: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+  },
+  yearText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0a235c',
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  monthBox: {
+    width: '30%',
+    aspectRatio: 1.5,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthBoxSelected: {
+    backgroundColor: '#1d4ed8',
+  },
+  monthBoxText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  monthBoxTextSelected: {
+    color: '#ffffff',
   },
 });

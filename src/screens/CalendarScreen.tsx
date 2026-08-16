@@ -9,10 +9,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Colors } from '../constants/colors';
-import { Typography, Spacing, Radius, Shadow } from '../constants/theme';
+import { Feather } from '@expo/vector-icons';
 import { useBillStore } from '../store/billStore';
-import { formatDate, formatCalendarHeader, isSameDayStr } from '../utils/dateUtils';
+import { formatCalendarHeader } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { isOverdue, isDueToday } from '../utils/dateUtils';
 import { BillCategoryIcon } from '../components/bills/BillCategoryIcon';
@@ -22,19 +21,12 @@ type NavProp = StackNavigationProp<RootStackParamList>;
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function getDotColor(hasPaid: boolean, hasOverdue: boolean, hasUpcoming: boolean): string | null {
-  if (hasPaid) return Colors.success;
-  if (hasOverdue) return Colors.danger;
-  if (hasUpcoming) return Colors.primaryLight;
-  return null;
-}
-
 export function CalendarScreen() {
   const navigation = useNavigation<NavProp>();
   const { bills } = useBillStore();
 
   const today = new Date();
-  const [year,  setYear]  = useState(today.getFullYear());
+  const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
 
@@ -42,7 +34,7 @@ export function CalendarScreen() {
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   // Monday = 0
-  let startOffset = (firstDay.getDay() + 6) % 7; // convert Sunday=0 to Monday=0
+  let startOffset = (firstDay.getDay() + 6) % 7;
 
   const cells: (number | null)[] = [
     ...Array(startOffset).fill(null),
@@ -50,7 +42,6 @@ export function CalendarScreen() {
   ];
 
   function getBillsForDay(day: number) {
-    const date = new Date(year, month, day).toISOString();
     return bills.filter(b => {
       const bd = new Date(b.dueDate);
       return bd.getFullYear() === year && bd.getMonth() === month && bd.getDate() === day;
@@ -73,118 +64,136 @@ export function CalendarScreen() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
 
-      <View style={styles.topBar}>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Pressable style={styles.headerIcon} onPress={() => (navigation as any).navigate('MainTabs')}>
+          <Feather name="chevron-left" size={24} color="#1e293b" />
+        </Pressable>
         <Text style={styles.title}>Calendar</Text>
+        <Pressable style={styles.headerIcon}>
+          <Feather name="calendar" size={22} color="#1e293b" />
+        </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Month Navigator */}
-        <View style={styles.monthNav}>
-          <Pressable onPress={prevMonth} style={styles.navBtn} hitSlop={12}>
-            <Text style={styles.navArrow}>‹</Text>
-          </Pressable>
-          <Text style={styles.monthLabel}>{formatCalendarHeader(year, month)}</Text>
-          <Pressable onPress={nextMonth} style={styles.navBtn} hitSlop={12}>
-            <Text style={styles.navArrow}>›</Text>
-          </Pressable>
-        </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-        {/* Day Labels */}
-        <View style={styles.dayLabelRow}>
-          {DAY_LABELS.map(d => (
-            <Text key={d} style={styles.dayLabel}>{d}</Text>
-          ))}
-        </View>
-
-        {/* Calendar Grid */}
-        <View style={styles.grid}>
-          {cells.map((day, i) => {
-            if (!day) return <View key={`empty-${i}`} style={styles.cell} />;
-
-            const dayBills = getBillsForDay(day);
-            const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
-            const isSelected = selectedDay === day;
-
-            const hasPaid    = dayBills.some(b => b.isPaid);
-            const hasOverdue = dayBills.some(b => !b.isPaid && isOverdue(b.dueDate, b.isPaid));
-            const hasUpcoming = dayBills.some(b => !b.isPaid && !isOverdue(b.dueDate, b.isPaid));
-
-            const dotColor = getDotColor(hasPaid, hasOverdue, hasUpcoming);
-
-            return (
-              <Pressable
-                key={day}
-                style={[
-                  styles.cell,
-                  isToday && styles.todayCell,
-                  isSelected && !isToday && styles.selectedCell,
-                ]}
-                onPress={() => setSelectedDay(day)}
-              >
-                <Text style={[
-                  styles.dayNum,
-                  isToday && styles.todayText,
-                  isSelected && !isToday && styles.selectedText,
-                ]}>
-                  {day}
-                </Text>
-                {dotColor && (
-                  <View style={[styles.dot, { backgroundColor: dotColor }]} />
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Legend */}
-        <View style={styles.legend}>
-          {[
-            { color: Colors.success, label: 'Paid' },
-            { color: Colors.primaryLight, label: 'Upcoming' },
-            { color: Colors.danger, label: 'Overdue' },
-          ].map(l => (
-            <View key={l.label} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: l.color }]} />
-              <Text style={styles.legendText}>{l.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Selected Day Bills */}
-        {selectedDay && (
-          <View style={styles.dayDetails}>
-            <Text style={styles.dayDetailsTitle}>
-              {selectedDay} {formatCalendarHeader(year, month)}
-            </Text>
-            {selectedBills.length === 0 ? (
-              <Text style={styles.noBillsText}>No bills on this day</Text>
-            ) : (
-              selectedBills.map(bill => (
-                <Pressable
-                  key={bill.id}
-                  style={styles.billRow}
-                  onPress={() => navigation.navigate('BillDetail', { billId: bill.id })}
-                >
-                  <BillCategoryIcon categoryId={bill.categoryId} size={36} />
-                  <View style={styles.billRowInfo}>
-                    <Text style={styles.billRowName}>{bill.name}</Text>
-                    <Text style={[
-                      styles.billRowStatus,
-                      bill.isPaid ? styles.paidText : isOverdue(bill.dueDate, bill.isPaid) ? styles.overdueText : styles.upcomingText,
-                    ]}>
-                      {bill.isPaid ? '✅ Paid' : isOverdue(bill.dueDate, bill.isPaid) ? '🚨 Overdue' : '🔔 Upcoming'}
-                    </Text>
-                  </View>
-                  <Text style={styles.billRowAmount}>{formatCurrency(bill.amount)}</Text>
-                </Pressable>
-              ))
-            )}
+        {/* ── Calendar Card ── */}
+        <View style={styles.calendarCard}>
+          {/* Month Navigator */}
+          <View style={styles.monthNav}>
+            <Pressable onPress={prevMonth} style={styles.navBtn} hitSlop={12}>
+              <Feather name="chevron-left" size={20} color="#1e293b" />
+            </Pressable>
+            <Text style={styles.monthLabel}>{formatCalendarHeader(year, month)}</Text>
+            <Pressable onPress={nextMonth} style={styles.navBtn} hitSlop={12}>
+              <Feather name="chevron-right" size={20} color="#1e293b" />
+            </Pressable>
           </View>
-        )}
 
-        <View style={{ height: 100 }} />
+          {/* Day Labels */}
+          <View style={styles.dayLabelRow}>
+            {DAY_LABELS.map(d => (
+              <Text key={d} style={styles.dayLabel}>{d}</Text>
+            ))}
+          </View>
+
+          {/* Calendar Grid */}
+          <View style={styles.grid}>
+            {cells.map((day, i) => {
+              if (!day) return <View key={`empty-${i}`} style={styles.cell} />;
+
+              const dayBills = getBillsForDay(day);
+              const isSelected = selectedDay === day;
+              const hasBills = dayBills.length > 0;
+
+              const hasPaid = dayBills.some(b => b.isPaid);
+              const hasOverdue = dayBills.some(b => !b.isPaid && isOverdue(b.dueDate, b.isPaid));
+              const hasUpcoming = dayBills.some(b => !b.isPaid && !isOverdue(b.dueDate, b.isPaid));
+
+              let dotColor = null;
+              if (hasOverdue) dotColor = '#ef4444';
+              else if (hasUpcoming) dotColor = '#3b82f6';
+              else if (hasPaid) dotColor = '#10b981';
+
+              return (
+                <Pressable
+                  key={day}
+                  style={[
+                    styles.cell,
+                    hasBills && !isSelected && styles.cellHasBills,
+                    isSelected && styles.cellSelected,
+                  ]}
+                  onPress={() => setSelectedDay(day)}
+                >
+                  <Text style={[
+                    styles.dayNum,
+                    isSelected && styles.dayNumSelected,
+                  ]}>
+                    {day}
+                  </Text>
+                  {dotColor && (
+                    <View style={[styles.dot, { backgroundColor: dotColor }]} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── Legend ── */}
+        <View style={styles.legendContainer}>
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+              <Text style={styles.legendText}>Paid</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#3b82f6' }]} />
+              <Text style={styles.legendText}>Upcoming</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
+              <Text style={styles.legendText}>Overdue</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Selected Day Bills ── */}
+        <View style={styles.billsCard}>
+          <Text style={styles.billsCardTitle}>
+            Bills on {selectedDay ? `${selectedDay} ${formatCalendarHeader(year, month).split(' ')[0]}` : '...'}
+          </Text>
+
+          {selectedBills.length === 0 ? (
+            <Text style={styles.noBillsText}>No bills on this day</Text>
+          ) : (
+            selectedBills.map((bill, idx) => {
+              const status = bill.isPaid ? 'Paid' : isOverdue(bill.dueDate, bill.isPaid) ? 'Overdue' : 'Upcoming';
+              const statusColor = bill.isPaid ? '#10b981' : isOverdue(bill.dueDate, bill.isPaid) ? '#ef4444' : '#3b82f6';
+              const iconName = bill.isPaid ? 'check-circle' : isOverdue(bill.dueDate, bill.isPaid) ? 'alert-circle' : 'clock';
+
+              return (
+                <View key={bill.id} style={[styles.billRow, idx === selectedBills.length - 1 && { borderBottomWidth: 0 }]}>
+                  <View style={styles.billIconWrap}>
+                    <Feather name="zap" size={16} color="#3b82f6" />
+                  </View>
+                  <View style={styles.billInfo}>
+                    <Text style={styles.billName}>{bill.name}</Text>
+                    <View style={styles.statusRow}>
+                      <Feather name={iconName} size={10} color={statusColor} style={{ marginTop: 1 }} />
+                      <Text style={[styles.billStatusText, { color: statusColor }]}>{status}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.billAmount}>{formatCurrency(bill.amount)}</Text>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        <View style={{ height: 120 }} />
       </ScrollView>
     </View>
   );
@@ -193,164 +202,199 @@ export function CalendarScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f3f8ff',
   },
-  topBar: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
-    paddingBottom: Spacing.md,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 26,
+    paddingBottom: 16,
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: Typography.size['2xl'],
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+  },
+
+  // ── Calendar Card
+  calendarCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 10,
+    shadowColor: '#cbd5e1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
   monthNav: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 8,
   },
   navBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadow.sm,
-  },
-  navArrow: {
-    fontSize: 22,
-    color: Colors.textPrimary,
-    fontWeight: Typography.weight.bold,
+    padding: 4,
   },
   monthLabel: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0a235c',
   },
   dayLabelRow: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
+    marginBottom: 12,
   },
   dayLabel: {
     flex: 1,
     textAlign: 'center',
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.bold,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0a235c',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: Spacing.md,
   },
   cell: {
     width: `${100 / 7}%`,
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.md,
+    borderRadius: 50,
+    marginBottom: 2,
   },
-  todayCell: {
-    backgroundColor: Colors.primaryDark,
+  cellHasBills: {
+    backgroundColor: '#cffafe', // Light cyan blue
   },
-  selectedCell: {
-    backgroundColor: Colors.accentLight,
-    borderWidth: 1.5,
-    borderColor: Colors.accent,
+  cellSelected: {
+    backgroundColor: '#1d4ed8', // Dark blue
   },
   dayNum: {
-    fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.semibold,
-    color: Colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a',
   },
-  todayText: {
-    color: Colors.textOnDark,
-    fontWeight: Typography.weight.extrabold,
-  },
-  selectedText: {
-    color: Colors.accent,
-    fontWeight: Typography.weight.bold,
+  dayNumSelected: {
+    color: '#ffffff',
   },
   dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    marginTop: 2,
+    position: 'absolute',
+    bottom: 6,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
-  legend: {
+
+  // ── Legend
+  legendContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    paddingVertical: 12,
+    marginBottom: 16,
+    shadowColor: '#cbd5e1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  legendRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.base,
-    marginTop: Spacing.base,
-    marginBottom: Spacing.base,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   legendText: {
-    fontSize: Typography.size.xs,
-    color: Colors.textSecondary,
-    fontWeight: Typography.weight.semibold,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0a235c',
   },
-  dayDetails: {
-    marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.xl,
-    padding: Spacing.base,
-    ...Shadow.md,
+
+  // ── Selected Bills
+  billsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 16,
+    shadowColor: '#cbd5e1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  dayDetailsTitle: {
-    fontSize: Typography.size.md,
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+  billsCardTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0a235c',
+    marginBottom: 16,
   },
   noBillsText: {
-    color: Colors.textMuted,
-    fontSize: Typography.size.sm,
+    fontSize: 13,
+    color: '#94a3b8',
     textAlign: 'center',
-    paddingVertical: Spacing.lg,
+    paddingVertical: 16,
+    fontWeight: '500',
   },
   billRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: '#f1f5f9',
   },
-  billRowInfo: {
+  billIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0e7ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  billInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
-  billRowName: {
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.bold,
-    color: Colors.textPrimary,
+  billName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
   },
-  billRowStatus: {
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.semibold,
-    marginTop: 2,
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  paidText:     { color: Colors.success },
-  overdueText:  { color: Colors.danger },
-  upcomingText: { color: Colors.primaryLight },
-  billRowAmount: {
-    fontSize: Typography.size.base,
-    fontWeight: Typography.weight.extrabold,
-    color: Colors.textPrimary,
+  billStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  billAmount: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a',
   },
 });
