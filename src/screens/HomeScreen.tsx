@@ -1,69 +1,33 @@
 import React, { useEffect } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  StatusBar,
-  ActivityIndicator,
-  Dimensions,
-  Image,
+  View, Text, ScrollView, StyleSheet, Pressable,
+  StatusBar, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, G } from 'react-native-svg';
+import { Feather } from '@expo/vector-icons';
 import { useBillStore } from '../store/billStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currencyUtils';
 import { getDashboardStats } from '../utils/analyticsUtils';
 import { getCategoryById } from '../constants/categories';
+import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
+import Svg, { Circle } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 
-// ─── Greeting Helper ─────────────────────────────────────────────────────────
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning,';
-  if (hour < 17) return 'Good Afternoon,';
-  return 'Good Evening,';
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
 }
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 
-// ─── SVG Components ──────────────────────────────────────────────────────────
-
-const GlassGradient = ({ colors, style }: { colors: string[], style?: any }) => (
-  <View style={[StyleSheet.absoluteFill, { borderRadius: 24, overflow: 'hidden' }, style]}>
-    <Svg width="100%" height="100%">
-      <Defs>
-        <LinearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={colors[0]} stopOpacity="1" />
-          <Stop offset="1" stopColor={colors[1]} stopOpacity="1" />
-        </LinearGradient>
-      </Defs>
-      <Rect width="100%" height="100%" fill="url(#grad)" />
-    </Svg>
-  </View>
-);
-
-const WalletIcon = () => (
-  <View style={styles.walletContainer}>
-    <View style={styles.walletBody}>
-      <View style={styles.walletFlap} />
-      <View style={styles.walletBadge}>
-        <Feather name="dollar-sign" size={14} color="#3b82f6" />
-      </View>
-      <View style={styles.walletLine} />
-    </View>
-  </View>
-);
-
-// ─── Due Soon Bill Row ───────────────────────────────────────────────────────
-function NewBillRow({ bill, onPress }: { bill: any; onPress: () => void }) {
+function BillRow({ bill, onPress }: { bill: any; onPress: () => void }) {
   const cat = getCategoryById(bill.categoryId);
   const dueDate = new Date(bill.dueDate);
   const today = new Date();
@@ -71,158 +35,173 @@ function NewBillRow({ bill, onPress }: { bill: any; onPress: () => void }) {
   const isOverdue = diffDays < 0;
   const isDueToday = diffDays === 0;
 
-  const statusColor = isOverdue ? '#ef4444' : isDueToday ? '#f59e0b' : '#6b7280';
+  const statusColor = isOverdue ? Colors.danger : isDueToday ? Colors.warning : Colors.textMuted;
+  const statusBg = isOverdue ? '#FFF0F0' : isDueToday ? '#FFF4EE' : Colors.surfaceAlt;
   const statusText = isOverdue
     ? `${Math.abs(diffDays)}d overdue`
-    : isDueToday
-      ? 'Due today'
-      : diffDays === 1
-        ? 'Due Tomorrow'
-        : `Due in ${diffDays} days`;
+    : isDueToday ? 'Due today'
+    : diffDays === 1 ? 'Tomorrow'
+    : `${diffDays} days left`;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.billCard, pressed && styles.billCardPressed]}
-      onPress={onPress}
-    >
-      <View style={[styles.billIconWrap, { backgroundColor: cat.color }]}>
-        <Feather name={cat.icon as any} size={18} color="#fff" />
+    <Pressable style={({ pressed }) => [styles.billCard, pressed && { opacity: 0.85 }]} onPress={onPress}>
+      <View style={[styles.billIcon, { backgroundColor: cat.bgColor }]}>
+        <Feather name={cat.icon as any} size={17} color={cat.color} />
       </View>
-
       <View style={styles.billInfo}>
         <Text style={styles.billName} numberOfLines={1}>{bill.name}</Text>
-        <Text style={[styles.billStatus, { color: statusColor }]}>{statusText}</Text>
+        <Text style={styles.billCat}>{cat.name}</Text>
       </View>
-
-      <Text style={styles.billAmount}>{formatCurrency(bill.amount)}</Text>
+      <View style={styles.billRight}>
+        <Text style={styles.billAmount}>{formatCurrency(bill.amount)}</Text>
+        <View style={[styles.billStatusPill, { backgroundColor: statusBg }]}>
+          <Text style={[styles.billStatusText, { color: statusColor }]}>{statusText}</Text>
+        </View>
+      </View>
     </Pressable>
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 export function HomeScreen() {
   const navigation = useNavigation<NavProp>();
   const { bills, payments, loading, fetchBills, fetchPayments } = useBillStore();
   const { userName } = useSettingsStore();
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    fetchBills();
-    fetchPayments();
-  }, []);
+  useEffect(() => { fetchBills(); fetchPayments(); }, []);
 
   const stats = getDashboardStats(bills, payments);
-
   const pendingBills = bills.filter(b => !b.isPaid).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const paidBills = bills.filter(b => b.isPaid);
-
-  // Total budget hardcoded to 25000 as per image for now, or based on actual data
-  const totalBudget = 25000;
+  const paidBills   = bills.filter(b => b.isPaid);
   const currentSpending = payments.reduce((sum, p) => sum + p.amount, 0);
-  const budgetPercentage = Math.min(Math.round((currentSpending / totalBudget) * 100) || 0, 100);
-
+  const totalBills  = bills.length;
+  const paidPct     = totalBills > 0 ? Math.round((paidBills.length / totalBills) * 100) : 0;
   const displayName = userName || (user?.email ? user.email.split('@')[0] : 'there');
-  const greeting = getGreeting();
+
+  // ring math
+  const R = 44; const CIRC = 2 * Math.PI * R;
+  const offset = CIRC - (paidPct / 100) * CIRC;
 
   if (loading && bills.length === 0) {
     return (
-      <View style={[styles.shell, styles.centered]}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={[styles.shell, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.deepNavy} />
       </View>
     );
   }
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Pressable style={styles.headerIcon}>
-            <Feather name="menu" size={24} color="#1e293b" />
-          </Pressable>
-          <Pressable style={styles.headerIcon} onPress={() => (navigation as any).navigate('Profile', { screen: 'History' })}>
-            <Feather name="bell" size={22} color="#1e293b" />
-            <View style={styles.notificationDot} />
-          </Pressable>
-        </View>
-
-        {/* ── Greeting ── */}
-        <View style={styles.greetingSection}>
           <View>
-            <Text style={styles.greetingText}>{greeting}</Text>
-            <Text style={styles.greetingName}>{displayName} 👋</Text>
+            <Text style={styles.greetSub}>{getGreeting()},</Text>
+            <Text style={styles.greetName}>{displayName} 👋</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-          </View>
+          <Pressable style={styles.bellBtn} onPress={() => navigation.navigate('History')}>
+            <Feather name="bell" size={19} color={Colors.textPrimary} />
+            <View style={styles.notifDot} />
+          </Pressable>
         </View>
 
-        {/* ── Upcoming Payments Card ── */}
-        <View style={styles.mainCardWrap}>
-          <GlassGradient colors={['#1e40af', '#3b82f6']} />
-          <View style={styles.mainCardContent}>
-            <View style={styles.mainCardLeft}>
-              <Text style={styles.mainCardLabel}>Upcoming Payments</Text>
-              <Text style={styles.mainCardAmount}>{formatCurrency(stats.totalUpcoming)}</Text>
-              <Text style={styles.mainCardSub}>Due this month</Text>
+        {/* ── Hero Card ── */}
+        <View style={styles.heroCard}>
+          {/* decorative circles */}
+          <View style={styles.heroCircle1} />
+          <View style={styles.heroCircle2} />
+
+          <View style={styles.heroLeft}>
+            <Text style={styles.heroLabel}>Total Upcoming</Text>
+            <Text style={styles.heroAmount}>{formatCurrency(stats.totalUpcoming)}</Text>
+            <Text style={styles.heroSub}>Due this month</Text>
+
+            <View style={styles.heroPillRow}>
+              <View style={styles.heroPill}>
+                <View style={styles.heroPillDot} />
+                <Text style={styles.heroPillText}>{pendingBills.length} pending</Text>
+              </View>
+              {stats.overdueCount > 0 && (
+                <View style={[styles.heroPill, { backgroundColor: 'rgba(229,62,62,0.15)' }]}>
+                  <View style={[styles.heroPillDot, { backgroundColor: Colors.danger }]} />
+                  <Text style={[styles.heroPillText, { color: Colors.danger }]}>{stats.overdueCount} overdue</Text>
+                </View>
+              )}
             </View>
-            <WalletIcon />
+          </View>
+
+          {/* Circle progress */}
+          <View style={styles.heroRight}>
+            <Svg width={110} height={110} viewBox="0 0 110 110">
+              <Circle cx="55" cy="55" r={R} stroke="rgba(255,255,255,0.12)" strokeWidth="8" fill="none" />
+              <Circle
+                cx="55" cy="55" r={R}
+                stroke={Colors.accent} strokeWidth="8" fill="none"
+                strokeDasharray={CIRC} strokeDashoffset={offset}
+                strokeLinecap="round" transform="rotate(-90 55 55)"
+              />
+            </Svg>
+            <View style={styles.ringCenter}>
+              <Text style={styles.ringPct}>{paidPct}%</Text>
+              <Text style={styles.ringLabel}>paid</Text>
+            </View>
           </View>
         </View>
 
-        {/* ── Summary Stats Row ── */}
+        {/* ── Quick Stats ── */}
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <View style={[styles.statIconBadge, { backgroundColor: '#fff7ed' }]}>
-              <Feather name="clock" size={14} color="#f97316" />
+          {[
+            { icon: 'clock', label: 'Pending', value: pendingBills.length, color: Colors.warning, bg: '#FFF4EE' },
+            { icon: 'check-circle', label: 'Paid', value: paidBills.length, color: Colors.success, bg: '#F3FDD3' },
+            { icon: 'alert-circle', label: 'Overdue', value: stats.overdueCount, color: Colors.danger, bg: '#FFF0F0' },
+          ].map(s => (
+            <View key={s.label} style={styles.statBox}>
+              <View style={[styles.statIcon, { backgroundColor: s.bg }]}>
+                <Feather name={s.icon as any} size={15} color={s.color} />
+              </View>
+              <Text style={[styles.statNum, { color: s.color }]}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
             </View>
-            <View style={styles.statBoxTextWrap}>
-              <Text style={[styles.statBoxNum, { color: '#f97316' }]}>{pendingBills.length}</Text>
-              <Text style={styles.statBoxLabel}>Due Soon</Text>
-            </View>
-          </View>
-
-          <View style={styles.statBox}>
-            <View style={[styles.statIconBadge, { backgroundColor: '#ecfdf5' }]}>
-              <Feather name="check-circle" size={14} color="#10b981" />
-            </View>
-            <View style={styles.statBoxTextWrap}>
-              <Text style={[styles.statBoxNum, { color: '#10b981' }]}>{paidBills.length}</Text>
-              <Text style={styles.statBoxLabel}>Paid</Text>
-            </View>
-          </View>
-
-          <View style={styles.statBox}>
-            <View style={[styles.statIconBadge, { backgroundColor: '#fef2f2' }]}>
-              <Feather name="alert-circle" size={14} color="#ef4444" />
-            </View>
-            <View style={styles.statBoxTextWrap}>
-              <Text style={[styles.statBoxNum, { color: '#ef4444' }]}>{stats.overdueCount}</Text>
-              <Text style={styles.statBoxLabel}>Overdue</Text>
-            </View>
-          </View>
+          ))}
         </View>
 
-        {/* ── Due Soon Section ── */}
-        <View style={styles.sectionHeader}>
+        {/* ── Quick Actions ── */}
+        <View style={styles.actionsRow}>
+          {[
+            { icon: 'plus-circle', label: 'Add Bill',  onPress: () => navigation.navigate('AddBill', {}) },
+            { icon: 'calendar',    label: 'Calendar',  onPress: () => navigation.navigate('MainTabs') },
+            { icon: 'bar-chart-2', label: 'Analytics', onPress: () => navigation.navigate('MainTabs') },
+            { icon: 'clock',       label: 'History',   onPress: () => navigation.navigate('History')  },
+          ].map(a => (
+            <Pressable key={a.label} style={styles.actionBtn} onPress={a.onPress}>
+              <View style={styles.actionIcon}>
+                <Feather name={a.icon as any} size={18} color={Colors.deepNavy} />
+              </View>
+              <Text style={styles.actionLabel}>{a.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ── Due Soon ── */}
+        <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Due Soon</Text>
           <Pressable onPress={() => navigation.navigate('MainTabs')}>
-            <Text style={styles.seeAll}>See All</Text>
+            <Text style={styles.seeAll}>See All →</Text>
           </Pressable>
         </View>
 
         <View style={styles.billsList}>
           {pendingBills.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No pending bills.</Text>
+            <View style={styles.emptyBox}>
+              <Feather name="check-circle" size={32} color={Colors.success} />
+              <Text style={styles.emptyText}>All caught up!</Text>
+              <Text style={styles.emptySubText}>No pending bills right now</Text>
             </View>
           ) : (
-            pendingBills.slice(0, 3).map(bill => (
-              <NewBillRow
+            pendingBills.slice(0, 4).map(bill => (
+              <BillRow
                 key={bill.id}
                 bill={bill}
                 onPress={() => navigation.navigate('BillDetail', { billId: bill.id })}
@@ -231,449 +210,169 @@ export function HomeScreen() {
           )}
         </View>
 
-        {/* ── Financial Insights Row ── */}
-        <View style={styles.insightsRow}>
-          {/* Monthly Spending */}
-          <View style={[styles.insightCard, { flex: 1.5, marginRight: 12 }]}>
-            <Text style={styles.insightLabel}>Monthly Spending</Text>
-            <View style={styles.insightAmountRow}>
-              <Text style={styles.insightAmountMain}>{formatCurrency(currentSpending)}</Text>
-              <Text style={styles.insightAmountSub}> / {formatCurrency(totalBudget)}</Text>
+        {/* ── Spending Snapshot ── */}
+        <View style={styles.spendCard}>
+          <View style={styles.spendTop}>
+            <View>
+              <Text style={styles.spendLabel}>Total Paid</Text>
+              <Text style={styles.spendAmount}>{formatCurrency(currentSpending)}</Text>
             </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${budgetPercentage}%` }]} />
-            </View>
-          </View>
-
-          {/* Budget Used */}
-          <View style={[styles.insightCard, { flex: 1, alignItems: 'center' }]}>
-            <Text style={styles.insightLabel}>Budget Used</Text>
-            <View style={styles.circleProgressWrap}>
-              <Text style={styles.circleProgressText}>{budgetPercentage}%</Text>
-              <Svg width="48" height="48" viewBox="0 0 48 48">
-                <Circle cx="24" cy="24" r="20" stroke="#e2e8f0" strokeWidth="4" fill="none" />
-                <Circle
-                  cx="24" cy="24" r="20"
-                  stroke="#1e3a8a" strokeWidth="4" fill="none"
-                  strokeDasharray="125" strokeDashoffset={125 - (budgetPercentage / 100) * 125}
-                  strokeLinecap="round"
-                  transform="rotate(-90 24 24)"
-                />
-              </Svg>
+            <View style={styles.spendBadge}>
+              <Feather name="trending-up" size={14} color={Colors.accent} />
+              <Text style={styles.spendBadgeText}>{paidBills.length} bills</Text>
             </View>
           </View>
+          <View style={styles.spendBar}>
+            <View style={[styles.spendFill, { width: `${Math.min(paidPct, 100)}%` }]} />
+          </View>
+          <Text style={styles.spendFooter}>{paidPct}% of your bills are paid this cycle</Text>
         </View>
 
-        {/* ── Payment Streak ── */}
-        <View style={styles.streakCardWrap}>
-          <GlassGradient colors={['#ffffff', '#e0e7ff']} style={{ opacity: 0.8 }} />
-          <View style={styles.streakCardContent}>
-            <View style={styles.streakIconWrap}>
-              <FontAwesome5 name="fire" size={24} color="#f97316" />
-            </View>
-            <View style={styles.streakInfo}>
-              <Text style={styles.streakTitle}>Payment Streak</Text>
-              <Text style={styles.streakSub}>12 months on time</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={{ height: 100 }} />
+        <View style={{ height: 140 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shell: {
-    flex: 1,
-    backgroundColor: '#f3f8ff', // Soft bluish white background
-  },
-  centered: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scroll: {
-    paddingTop: 14,
-    paddingBottom: 20,
-  },
+  shell: { flex: 1, backgroundColor: Colors.background },
+  scroll: { paddingBottom: 20 },
 
-  // ── Header
+  /* Header */
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 6,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 22, paddingTop: 52, paddingBottom: 18,
   },
-  headerIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+  greetSub: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  greetName: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.3, marginTop: 1 },
+  bellBtn: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface,
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#3b82f6',
-    borderWidth: 1,
-    borderColor: '#f3f8ff',
+  notifDot: {
+    position: 'absolute', top: 9, right: 9,
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: Colors.accent, borderWidth: 1.5, borderColor: Colors.surface,
   },
 
-  // ── Greeting
-  greetingSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 24,
+  /* Hero Card */
+  heroCard: {
+    marginHorizontal: 22, marginBottom: 16, borderRadius: 24,
+    backgroundColor: Colors.deepNavy, padding: 24,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22, shadowRadius: 16, elevation: 10,
   },
-  greetingText: {
-    fontSize: 15,
-    color: '#3b82f6',
-    fontWeight: '600',
-    marginBottom: 4,
+  heroCircle1: {
+    position: 'absolute', width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(200,241,53,0.06)', top: -60, right: 60,
   },
-  greetingName: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1e293b',
-    letterSpacing: -0.5,
+  heroCircle2: {
+    position: 'absolute', width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.04)', bottom: -30, left: 20,
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 24,
-    backgroundColor: '#9ca3af',
-    alignItems: 'center',
-    justifyContent: 'center',
+  heroLeft: { flex: 1, marginRight: 12 },
+  heroLabel: { color: Colors.textOnDarkMuted, fontSize: 12, fontWeight: '600', marginBottom: 6, letterSpacing: 0.3 },
+  heroAmount: { color: Colors.surface, fontSize: 30, fontWeight: '900', letterSpacing: -0.8, marginBottom: 4 },
+  heroSub: { color: Colors.textOnDarkMuted, fontSize: 12, marginBottom: 14 },
+  heroPillRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  heroPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(200,241,53,0.15)',
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
   },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#fff',
-  },
+  heroPillDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.accent },
+  heroPillText: { fontSize: 11, fontWeight: '700', color: Colors.accent },
+  heroRight: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  ringCenter: { position: 'absolute', alignItems: 'center' },
+  ringPct: { fontSize: 18, fontWeight: '900', color: Colors.surface },
+  ringLabel: { fontSize: 10, fontWeight: '600', color: Colors.textOnDarkMuted },
 
-  // ── Main Card
-  mainCardWrap: {
-    height: 140,
-    marginHorizontal: 24,
-    marginBottom: 20,
-    borderRadius: 24,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  mainCardContent: {
-    flex: 1,
-    flexDirection: 'row',
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mainCardLeft: {
-    flex: 1,
-  },
-  mainCardLabel: {
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  mainCardAmount: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  mainCardSub: {
-    color: '#bfdbfe',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-
-  // Wallet SVG Styling
-  walletContainer: {
-    width: 80,
-    height: 70,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
-  },
-  walletBody: {
-    width: 72,
-    height: 52,
-    backgroundColor: '#60a5fa',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#93c5fd',
-    opacity: 0.9,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#fff',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-  },
-  walletFlap: {
-    position: 'absolute',
-    top: -12,
-    right: 8,
-    width: 44,
-    height: 20,
-    backgroundColor: '#93c5fd',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    opacity: 0.8,
-  },
-  walletBadge: {
-    position: 'absolute',
-    bottom: -6,
-    right: -6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#dbeafe',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#3b82f6',
-  },
-  walletLine: {
-    position: 'absolute',
-    left: 8,
-    top: 16,
-    width: 16,
-    height: 3,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-    opacity: 0.8,
-  },
-
-  // ── Stats Row
+  /* Stats */
   statsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    justifyContent: 'space-between',
-    marginBottom: 24,
+    flexDirection: 'row', paddingHorizontal: 22,
+    gap: 10, marginBottom: 16,
   },
   statBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: (width - 48 - 24) / 3, // 3 columns
-    shadowColor: '#cbd5e1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 2,
+    flex: 1, backgroundColor: Colors.surface, borderRadius: 16,
+    paddingVertical: 14, alignItems: 'center', gap: 5,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  statIconBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
+  statIcon: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 2,
   },
-  statBoxTextWrap: {
-    flex: 1,
-  },
-  statBoxNum: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  statBoxLabel: {
-    fontSize: 10,
-    color: '#64748b',
-    fontWeight: '600',
-  },
+  statNum: { fontSize: 18, fontWeight: '900' },
+  statLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '600' },
 
-  // ── Section Header
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 16,
+  /* Quick Actions */
+  actionsRow: {
+    flexDirection: 'row', paddingHorizontal: 22,
+    gap: 10, marginBottom: 22,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1e293b',
+  actionBtn: { flex: 1, alignItems: 'center', gap: 6 },
+  actionIcon: {
+    width: 50, height: 50, borderRadius: 16,
+    backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  seeAll: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563eb',
-  },
+  actionLabel: { fontSize: 10, fontWeight: '700', color: Colors.textSecondary },
 
-  // ── Due Soon List
-  billsList: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+  /* Section */
+  sectionRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingHorizontal: 22, marginBottom: 10,
   },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
+  seeAll: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+
+  /* Bill rows */
+  billsList: { paddingHorizontal: 22, marginBottom: 16 },
   billCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#cbd5e1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: Colors.surface, borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
-  billCardPressed: {
-    backgroundColor: '#f8fafc',
+  billIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  billIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  billInfo: {
-    flex: 1,
-  },
-  billName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  billStatus: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  billAmount: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
+  billInfo: { flex: 1 },
+  billName: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
+  billCat: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
+  billRight: { alignItems: 'flex-end', gap: 4 },
+  billAmount: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  billStatusPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  billStatusText: { fontSize: 10, fontWeight: '700' },
+  emptyBox: { alignItems: 'center', paddingVertical: 28, gap: 6 },
+  emptyText: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  emptySubText: { fontSize: 12, color: Colors.textMuted },
 
-  emptyState: {
-    padding: 20,
-    alignItems: 'center',
+  /* Spend card */
+  spendCard: {
+    marginHorizontal: 22, backgroundColor: Colors.surface, borderRadius: 20,
+    padding: 18, marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
-  emptyText: {
-    color: '#94a3b8',
-    fontSize: 14,
+  spendTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  spendLabel: { fontSize: 12, color: Colors.textMuted, fontWeight: '600', marginBottom: 3 },
+  spendAmount: { fontSize: 22, fontWeight: '900', color: Colors.textPrimary, letterSpacing: -0.5 },
+  spendBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#F3FDD3', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
-
-  // ── Financial Insights
-  insightsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 20,
+  spendBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.deepNavy },
+  spendBar: {
+    height: 7, backgroundColor: Colors.borderLight, borderRadius: 4,
+    overflow: 'hidden', marginBottom: 8,
   },
-  insightCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: '#cbd5e1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  insightLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1e3a8a',
-    marginBottom: 8,
-  },
-  insightAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 12,
-  },
-  insightAmountMain: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  insightAmountSub: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94a3b8',
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#1e3a8a',
-    borderRadius: 3,
-  },
-  circleProgressWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-  },
-  circleProgressText: {
-    position: 'absolute',
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-
-  // ── Payment Streak
-  streakCardWrap: {
-    height: 80,
-    marginHorizontal: 24,
-    borderRadius: 20,
-    shadowColor: '#e0e7ff',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  streakCardContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  streakIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-  },
-  streakInfo: {
-    flex: 1,
-  },
-  streakTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1e3a8a',
-    marginBottom: 2,
-  },
-  streakSub: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748b',
-  },
+  spendFill: { height: '100%', backgroundColor: Colors.deepNavy, borderRadius: 4 },
+  spendFooter: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
 });

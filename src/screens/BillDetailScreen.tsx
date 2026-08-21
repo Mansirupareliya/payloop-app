@@ -9,17 +9,20 @@ import {
   Modal,
   Alert,
   StatusBar,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
 import { useBillStore } from '../store/billStore';
+import { usePhotoStore } from '../store/photoStore';
 import { getCategoryById } from '../constants/categories';
 import { formatCurrency } from '../utils/currencyUtils';
-import { formatDate, getDueDateLabel, isOverdue, isDueToday } from '../utils/dateUtils';
-import { BillCategoryIcon } from '../components/bills/BillCategoryIcon';
+import { formatDate, isOverdue, isDueToday } from '../utils/dateUtils';
 import { RootStackParamList, PaymentMethod, BillStatus } from '../types';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { Colors } from '../constants/colors';
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 type RoutePropType = RouteProp<RootStackParamList, 'BillDetail'>;
@@ -39,6 +42,8 @@ export function BillDetailScreen() {
   const { getBillById, markAsPaid, deleteBill } = useBillStore();
 
   const bill = getBillById(route.params.billId);
+  const photoUri = usePhotoStore(s => bill ? s.photos[bill.id] : undefined);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [payMethod, setPayMethod] = useState<PaymentMethod>('UPI');
   const [transId, setTransId] = useState('');
@@ -56,19 +61,19 @@ export function BillDetailScreen() {
   const category = getCategoryById(bill.categoryId);
   const status = getBillStatus(bill.isPaid, bill.dueDate);
 
-  let statusColor = '#3b82f6'; // upcoming
+  let statusColor: string = Colors.deepNavy; // upcoming
   let statusIcon = 'clock';
   let statusText = 'Upcoming';
   if (status === 'paid') {
-    statusColor = '#10b981';
+    statusColor = Colors.success;
     statusIcon = 'check-circle';
     statusText = 'Paid';
   } else if (status === 'overdue') {
-    statusColor = '#ef4444';
+    statusColor = Colors.danger;
     statusIcon = 'alert-circle';
     statusText = 'Overdue';
   } else if (status === 'due_today') {
-    statusColor = '#f59e0b';
+    statusColor = Colors.warning;
     statusIcon = 'alert-triangle';
     statusText = 'Due Today';
   }
@@ -107,12 +112,12 @@ export function BillDetailScreen() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.headerIcon} hitSlop={16}>
-          <Feather name="chevron-left" size={24} color="#0a235c" />
+          <Feather name="chevron-left" size={24} color={Colors.deepNavy} />
         </Pressable>
         <Text style={styles.title}>Bill Details</Text>
         <Pressable
@@ -120,7 +125,7 @@ export function BillDetailScreen() {
           style={styles.headerIcon}
           hitSlop={8}
         >
-          <Feather name="edit-2" size={20} color="#0a235c" />
+          <Feather name="edit-2" size={20} color={Colors.deepNavy} />
         </Pressable>
       </View>
 
@@ -136,7 +141,7 @@ export function BillDetailScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
             <View style={styles.iconWrap}>
-              <Feather name={category.icon as any} size={28} color="#1d4ed8" />
+              <Feather name={category.icon as any} size={28} color={Colors.deepNavy} />
             </View>
             <View style={styles.heroInfo}>
               <Text style={styles.heroName}>{bill.name}</Text>
@@ -154,6 +159,17 @@ export function BillDetailScreen() {
             <Text style={styles.heroDue}>Due: {formatDate(bill.dueDate)}</Text>
           </View>
         </View>
+
+        {/* ── Bill Photo ── */}
+        {photoUri && (
+          <Pressable style={styles.photoCard} onPress={() => setShowPhotoModal(true)}>
+            <Image source={{ uri: photoUri }} style={styles.photoImage} resizeMode="cover" />
+            <View style={styles.photoOverlay}>
+              <Feather name="maximize" size={18} color="#fff" />
+              <Text style={styles.photoOverlayText}>Tap to view full</Text>
+            </View>
+          </Pressable>
+        )}
 
         {/* ── Details Card ── */}
         <View style={styles.card}>
@@ -211,8 +227,8 @@ export function BillDetailScreen() {
               <Svg width="100%" height="100%" style={{ borderRadius: 28 }}>
                 <Defs>
                   <LinearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="0">
-                    <Stop offset="0" stopColor="#0ea5e9" />
-                    <Stop offset="1" stopColor="#1d4ed8" />
+                    <Stop offset="0" stopColor={Colors.deepNavy} />
+                    <Stop offset="1" stopColor="#1A1A1A" />
                   </LinearGradient>
                 </Defs>
                 <Rect width="100%" height="100%" fill="url(#btnGrad)" rx="28" />
@@ -257,7 +273,7 @@ export function BillDetailScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="e.g. UPI12345"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={Colors.textMuted}
               value={transId}
               onChangeText={setTransId}
             />
@@ -266,7 +282,7 @@ export function BillDetailScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Any notes..."
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={Colors.textMuted}
               value={payNotes}
               onChangeText={setPayNotes}
             />
@@ -284,19 +300,64 @@ export function BillDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Fullscreen Photo Modal ── */}
+      <Modal visible={showPhotoModal} transparent animationType="fade">
+        <Pressable style={styles.fullscreenBg} onPress={() => setShowPhotoModal(false)}>
+          {photoUri && (
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.fullscreenImg}
+              resizeMode="contain"
+            />
+          )}
+          <Pressable style={styles.fullscreenClose} onPress={() => setShowPhotoModal(false)}>
+            <Feather name="x" size={20} color="#fff" />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
+const { width: SW } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
+  // ── Bill photo
+  photoCard: {
+    marginHorizontal: 24, marginBottom: 16, borderRadius: 16,
+    overflow: 'hidden', height: 180,
+  },
+  photoImage: { width: '100%', height: '100%' },
+  photoOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  photoOverlayText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
+  // ── Fullscreen photo modal
+  fullscreenBg: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  fullscreenImg: { width: SW, height: SW * 1.4 },
+  fullscreenClose: {
+    position: 'absolute', top: 52, right: 20,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
   shell: {
     flex: 1,
-    backgroundColor: '#f3f8ff',
+    backgroundColor: Colors.background,
   },
   notFound: {
     textAlign: 'center',
     marginTop: 10,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontSize: 10,
   },
 
@@ -306,7 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingTop: 52,
     paddingBottom: 16,
   },
   headerIcon: {
@@ -318,7 +379,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
 
   scroll: {
@@ -340,11 +401,11 @@ const styles = StyleSheet.create({
 
   // ── Hero Card
   heroCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 15,
     marginBottom: 20,
-    shadowColor: '#cbd5e1',
+    shadowColor: Colors.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -368,18 +429,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroName: {
-    color: '#0a235c',
+    color: Colors.deepNavy,
     fontSize: 14,
     fontWeight: '800',
     marginBottom: 4,
   },
   heroCategory: {
-    color: '#64748b',
+    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   heroAmount: {
-    color: '#1d4ed8',
+    color: Colors.deepNavy,
     fontSize: 22,
     fontWeight: '800',
     marginBottom: 20,
@@ -390,7 +451,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: Colors.borderLight,
   },
   statusRow: {
     flexDirection: 'row',
@@ -402,18 +463,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   heroDue: {
-    color: '#64748b',
+    color: Colors.textMuted,
     fontSize: 13,
     fontWeight: '700',
   },
 
   // ── Card
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 24,
     marginBottom: 20,
-    shadowColor: '#cbd5e1',
+    shadowColor: Colors.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -422,7 +483,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
     marginBottom: 16,
   },
   detailRow: {
@@ -431,19 +492,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.borderLight,
   },
   detailLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
     textAlign: 'right',
   },
 
@@ -455,14 +516,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 12,
     marginBottom: 16,
-    shadowColor: '#1d4ed8',
+    shadowColor: Colors.deepNavy,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
   payBtnText: {
-    color: '#ffffff',
+    color: Colors.surface,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -471,11 +532,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ef4444',
+    borderColor: Colors.danger,
     backgroundColor: 'transparent',
   },
   deleteBtnText: {
-    color: '#ef4444',
+    color: Colors.danger,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -487,7 +548,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     padding: 24,
@@ -497,20 +558,20 @@ const styles = StyleSheet.create({
     width: 48,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#cbd5e1',
+    backgroundColor: Colors.border,
     alignSelf: 'center',
     marginBottom: 24,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
     textAlign: 'center',
     marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: '#64748b',
+    color: Colors.textMuted,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 24,
@@ -518,18 +579,18 @@ const styles = StyleSheet.create({
   modalLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
     marginBottom: 12,
   },
   modalInput: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 14,
-    color: '#0f172a',
+    color: Colors.textPrimary,
     fontWeight: '600',
     marginBottom: 16,
   },
@@ -537,32 +598,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pill: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     marginBottom: 4,
   },
   pillActive: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: Colors.deepNavy,
   },
   pillText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748b',
+    color: Colors.textMuted,
   },
   pillTextActive: {
-    color: '#ffffff',
+    color: Colors.surface,
   },
   confirmBtn: {
-    backgroundColor: '#10b981', // emerald-500
+    backgroundColor: Colors.success, // emerald-500
     borderRadius: 28,
     paddingVertical: 18,
     alignItems: 'center',
     marginTop: 8,
   },
   confirmBtnText: {
-    color: '#ffffff',
+    color: Colors.surface,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -572,7 +633,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   cancelBtnText: {
-    color: '#64748b',
+    color: Colors.textMuted,
     fontSize: 14,
     fontWeight: '700',
   },

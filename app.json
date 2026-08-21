@@ -10,13 +10,11 @@
       "supportsTablet": true
     },
     "splash": {
-      "image": "./assets/splash.jpg",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0A0A"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
+        "backgroundColor": "#0A0A0A",
         "foregroundImage": "./assets/adaptive-icon.jpg"
       },
       "predictiveBackGestureEnabled": false,

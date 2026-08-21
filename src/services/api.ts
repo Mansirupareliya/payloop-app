@@ -2,7 +2,7 @@ import { Bill, Payment, PaymentMethod } from '../types';
 import { useAuthStore } from '../store/authStore';
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
-const BASE_URL = 'http://10.219.46.16:3000/api';
+const BASE_URL = 'http://192.168.29.112:4000/api';
 
 // ─── Generic fetch helper ────────────────────────────────────────────────────
 async function request<T>(

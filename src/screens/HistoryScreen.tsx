@@ -15,6 +15,7 @@ import { formatCurrency } from '../utils/currencyUtils';
 import { formatDate } from '../utils/dateUtils';
 import { getCategoryById } from '../constants/categories';
 import { format, parseISO, setYear, setMonth } from 'date-fns';
+import { Colors } from '../constants/colors';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -53,12 +54,12 @@ export function HistoryScreen() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={16}>
-          <Feather name="chevron-left" size={24} color="#0a235c" />
+          <Feather name="chevron-left" size={24} color={Colors.deepNavy} />
         </Pressable>
         <Text style={styles.title}>History</Text>
 
@@ -66,9 +67,9 @@ export function HistoryScreen() {
           setPickerYear(selectedDate.getFullYear());
           setShowPicker(true);
         }}>
-          <Feather name="calendar" size={16} color="#0a235c" />
+          <Feather name="calendar" size={16} color={Colors.deepNavy} />
           <Text style={styles.monthButtonText}>{displayMonthLabel}</Text>
-          <Feather name="chevron-down" size={16} color="#0a235c" />
+          <Feather name="chevron-down" size={16} color={Colors.deepNavy} />
         </Pressable>
       </View>
 
@@ -93,7 +94,7 @@ export function HistoryScreen() {
               return (
                 <View key={p.id} style={[styles.payRow, idx === arr.length - 1 && { borderBottomWidth: 0 }]}>
                   <View style={[styles.catIconWrap, { backgroundColor: cat.color || '#eff6ff' }]}>
-                    <Feather name={cat.icon as any} size={20} color="#fff" />
+                    <Feather name={cat.icon as any} size={20} color={Colors.textOnDark} />
                   </View>
 
                   <View style={styles.payInfo}>
@@ -123,7 +124,7 @@ export function HistoryScreen() {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 140 }} />
       </ScrollView>
 
       {/* ── Month/Year Picker Modal ── */}
@@ -133,11 +134,11 @@ export function HistoryScreen() {
             {/* Year Selector */}
             <View style={styles.yearRow}>
               <Pressable onPress={() => setPickerYear(y => y - 1)} style={styles.yearBtn}>
-                <Feather name="chevron-left" size={24} color="#0a235c" />
+                <Feather name="chevron-left" size={24} color={Colors.deepNavy} />
               </Pressable>
               <Text style={styles.yearText}>{pickerYear}</Text>
               <Pressable onPress={() => setPickerYear(y => y + 1)} style={styles.yearBtn}>
-                <Feather name="chevron-right" size={24} color="#0a235c" />
+                <Feather name="chevron-right" size={24} color={Colors.deepNavy} />
               </Pressable>
             </View>
 
@@ -167,14 +168,14 @@ export function HistoryScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: '#f3f8ff',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 14,
+    paddingTop: 52,
     paddingBottom: 16,
   },
   backBtn: {
@@ -185,12 +186,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   monthButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: Colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
   monthButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   scroll: {
     paddingHorizontal: 24,
@@ -213,21 +214,21 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
     marginBottom: 8,
   },
   emptySubText: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '600',
   },
 
   monthCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 0,
     marginBottom: 20,
-    shadowColor: '#cbd5e1',
+    shadowColor: Colors.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -238,12 +239,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1d4ed8',
+    backgroundColor: Colors.deepNavy,
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
   monthTitle: {
-    color: '#ffffff',
+    color: Colors.surface,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.borderLight,
     gap: 16,
   },
   catIconWrap: {
@@ -275,16 +276,16 @@ const styles = StyleSheet.create({
   payName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   payMeta: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '700',
   },
   payDate: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '600',
   },
   payRight: {
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
   payAmount: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1d4ed8',
+    color: Colors.deepNavy,
   },
   paidBadge: {
     backgroundColor: '#d1fae5', // green-100
@@ -312,10 +313,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceAlt,
   },
   monthFooterText: {
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 24,
     width: '100%',
@@ -347,13 +348,13 @@ const styles = StyleSheet.create({
   },
   yearBtn: {
     padding: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     borderRadius: 12,
   },
   yearText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   monthGrid: {
     flexDirection: 'row',
@@ -364,20 +365,20 @@ const styles = StyleSheet.create({
   monthBox: {
     width: '30%',
     aspectRatio: 1.5,
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceAlt,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthBoxSelected: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: Colors.deepNavy,
   },
   monthBoxText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#64748b',
+    color: Colors.textMuted,
   },
   monthBoxTextSelected: {
-    color: '#ffffff',
+    color: Colors.surface,
   },
 });

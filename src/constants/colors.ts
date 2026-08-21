@@ -1,65 +1,66 @@
 export const Colors = {
-  // ─── Brand Blues (from design palette) ───────────────────────────────────────
-  deepNavy:      '#001B48',   // Darkest — headers, dark sections
-  darkBlue:      '#02457A',   // Dark — gradients, nav bg
-  primary:       '#018ABE',   // Primary — buttons, highlights, icons
-  lightBlue:     '#97CADB',   // Light — soft accents, tags, borders
-  paleBlue:      '#D6E8EE',   // Lightest — backgrounds, card tints
+  // ─── Core Monochrome ──────────────────────────────────────────────────────────
+  deepNavy:      '#0A0A0A',   // Near-black — primary text, dark cards
+  darkBlue:      '#1A1A1A',   // Dark surface — dark buttons, dark cards
+  primary:       '#000000',   // Lime green — THE accent (only pop of color)
+  lightBlue:     '#888888',   // Mid gray — secondary icons
+  paleBlue:      '#F0F0F0',   // Light gray — tint backgrounds
 
-  // Aliases for existing code compatibility
-  primaryLight:  '#97CADB',
-  primaryDark:   '#02457A',
-  primaryGlow:   '#EAF4F8',
-  accent:        '#018ABE',
-  accentLight:   '#EAF4F8',
+  // ─── Aliases ──────────────────────────────────────────────────────────────────
+  primaryLight:  '#E8FBAB',   // Light lime tint
+  primaryDark:   '#1A1A1A',
+  primaryGlow:   '#F3FDD3',   // Very faint lime background
+  accent:        '#C8F135',   // Same as primary
+  accentLight:   '#F3FDD3',
 
   // ─── Semantic ─────────────────────────────────────────────────────────────────
-  success:       '#10B981',
-  successLight:  '#D1FAE5',
-  warning:       '#F59E0B',
+  success:       '#C8F135',   // Lime = positive/paid (matches brand)
+  successLight:  '#F3FDD3',
+  warning:       '#F5A623',   // Muted amber
   warningLight:  '#FEF3C7',
-  danger:        '#EF4444',
-  dangerLight:   '#FEE2E2',
-  info:          '#018ABE',
-  infoLight:     '#D6E8EE',
+  danger:        '#E53E3E',   // Clean red
+  dangerLight:   '#FFF0F0',
+  info:          '#1A1A1A',
+  infoLight:     '#F0F0F0',
 
   // ─── Backgrounds ──────────────────────────────────────────────────────────────
-  background:    '#F4F9FC',   // App bg — very light blue-white
-  surface:       '#FFFFFF',
-  surfaceAlt:    '#EAF4F8',
-  border:        '#D6E8EE',
-  borderLight:   '#EAF4F8',
+  background:    '#EFEFEF',   // Light gray — app background
+  surface:       '#FFFFFF',   // Pure white — cards, sheets
+  surfaceAlt:    '#F7F7F7',   // Off-white — input fills
+  border:        '#E5E5E5',   // Subtle gray border
+  borderLight:   '#F0F0F0',   // Lightest divider
 
   // ─── Text ─────────────────────────────────────────────────────────────────────
-  textPrimary:   '#001B48',   // Use deep navy for primary text
-  textSecondary: '#02457A',
-  textMuted:     '#97CADB',
-  textOnDark:    '#FFFFFF',
-  textOnDarkMuted: '#D6E8EE',
+  textPrimary:   '#0A0A0A',   // Near-black headings & values
+  textSecondary: '#555555',   // Mid gray — labels
+  textMuted:     '#999999',   // Light gray — placeholders, hints
+  textOnDark:    '#FFFFFF',   // White text on dark cards
+  textOnDarkMuted: '#AAAAAA',
 
   // ─── Gradients ────────────────────────────────────────────────────────────────
-  gradientPrimary: ['#018ABE', '#02457A'],
-  gradientDark:    ['#001B48', '#02457A'],
-  gradientLight:   ['#97CADB', '#D6E8EE'],
-  gradientSuccess: ['#10B981', '#059669'],
-  gradientWarning: ['#F59E0B', '#D97706'],
-  gradientDanger:  ['#EF4444', '#DC2626'],
-  gradientCard:    ['#018ABE', '#02457A'],
+  gradientPrimary: ['#1A1A1A', '#0A0A0A'],
+  gradientDark:    ['#0A0A0A', '#1A1A1A'],
+  gradientLight:   ['#F0F0F0', '#FFFFFF'],
+  gradientSuccess: ['#C8F135', '#A8D400'],
+  gradientWarning: ['#F5A623', '#E8940F'],
+  gradientDanger:  ['#E53E3E', '#C53030'],
+  gradientCard:    ['#1A1A1A', '#0A0A0A'],
+  gradientGold:    ['#C8F135', '#A8D400'],
 
-  // ─── Category Colors ──────────────────────────────────────────────────────────
-  catRent:          '#8B5CF6',
-  catElectricity:   '#F59E0B',
-  catWater:         '#018ABE',
-  catGas:           '#EF4444',
-  catMobile:        '#10B981',
-  catInternet:      '#02457A',
-  catCreditCard:    '#EAB308',
-  catLoan:          '#F97316',
-  catInsurance:     '#14B8A6',
-  catEntertainment: '#A855F7',
-  catEducation:     '#3B82F6',
-  catVehicle:       '#64748B',
-  catMaintenance:   '#78716C',
-  catShopping:      '#F43F5E',
-  catOther:         '#97CADB',
+  // ─── Category Colors (muted, neutral-toned) ───────────────────────────────────
+  catRent:          '#645ac7',   // Soft violet
+  catElectricity:   '#E8960A',   // Warm amber
+  catWater:         '#3B82F6',   // Clean blue
+  catGas:           '#EF4444',   // Red
+  catMobile:        '#22C55E',   // Green
+  catInternet:      '#334155',   // Dark slate
+  catCreditCard:    '#D97706',   // Dark amber
+  catLoan:          '#EA580C',   // Orange
+  catInsurance:     '#0D9488',   // Teal
+  catEntertainment: '#A855F7',   // Purple
+  catEducation:     '#2563EB',   // Blue
+  catVehicle:       '#64748B',   // Slate gray
+  catMaintenance:   '#78716C',   // Stone
+  catShopping:      '#EC4899',   // Pink
+  catOther:         '#9CA3AF',   // Cool gray
 } as const;

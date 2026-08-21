@@ -21,6 +21,7 @@ import {
 } from '../utils/analyticsUtils';
 import { getCategoryById } from '../constants/categories';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { Colors } from '../constants/colors';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -54,7 +55,7 @@ export function AnalyticsScreen() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -63,9 +64,9 @@ export function AnalyticsScreen() {
           setPickerYear(selectedDate.getFullYear());
           setShowPicker(true);
         }}>
-          <Feather name="calendar" size={16} color="#0a235c" />
+          <Feather name="calendar" size={16} color={Colors.deepNavy} />
           <Text style={styles.monthButtonText}>{displayMonthLabel}</Text>
-          <Feather name="chevron-down" size={16} color="#0a235c" />
+          <Feather name="chevron-down" size={16} color={Colors.deepNavy} />
         </Pressable>
       </View>
 
@@ -77,8 +78,8 @@ export function AnalyticsScreen() {
             <Svg width="100%" height="100%" style={{ borderRadius: 24 }}>
               <Defs>
                 <LinearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0" stopColor="#0ea5e9" />
-                  <Stop offset="1" stopColor="#1d4ed8" />
+                  <Stop offset="0" stopColor="#1A1A1A" />
+                  <Stop offset="1" stopColor={Colors.deepNavy} />
                 </LinearGradient>
               </Defs>
               <Rect width="100%" height="100%" fill="url(#heroGrad)" rx="24" />
@@ -90,7 +91,7 @@ export function AnalyticsScreen() {
 
           <View style={styles.heroRow}>
             <View style={styles.heroStat}>
-              <View style={[styles.dot, { backgroundColor: '#10b981' }]} />
+              <View style={[styles.dot, { backgroundColor: Colors.success }]} />
               <View>
                 <Text style={styles.heroStatLabel}>Paid</Text>
                 <Text style={styles.heroStatValue}>{formatCurrency(stats.totalPaid)}</Text>
@@ -98,7 +99,7 @@ export function AnalyticsScreen() {
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroStat}>
-              <View style={[styles.dot, { backgroundColor: '#f59e0b' }]} />
+              <View style={[styles.dot, { backgroundColor: Colors.warning }]} />
               <View>
                 <Text style={styles.heroStatLabel}>Pending</Text>
                 <Text style={styles.heroStatValue}>{formatCurrency(stats.totalPending)}</Text>
@@ -129,12 +130,12 @@ export function AnalyticsScreen() {
                         styles.bar,
                         {
                           height: Math.max(height, 8),
-                          backgroundColor: isCurrentRealMonth ? '#1d4ed8' : '#e2e8f0',
+                          backgroundColor: isCurrentRealMonth ? Colors.deepNavy : Colors.border,
                         },
                       ]}
                     />
                   </View>
-                  <Text style={[styles.barLabel, isCurrentRealMonth && { color: '#0a235c', fontWeight: '800' }]}>{m.month}</Text>
+                  <Text style={[styles.barLabel, isCurrentRealMonth && { color: Colors.deepNavy, fontWeight: '800' }]}>{m.month}</Text>
                 </View>
               );
             })}
@@ -155,7 +156,7 @@ export function AnalyticsScreen() {
                 styles.fill,
                 {
                   width: `${Math.min(100, Math.max(0, budgetUsage.percent))}%`,
-                  backgroundColor: budgetUsage.percent >= 85 ? '#ef4444' : budgetUsage.percent >= 65 ? '#f59e0b' : '#3b82f6',
+                  backgroundColor: budgetUsage.percent >= 85 ? Colors.danger : budgetUsage.percent >= 65 ? Colors.warning : Colors.deepNavy,
                 },
               ]}
             />
@@ -178,7 +179,7 @@ export function AnalyticsScreen() {
               return (
                 <View key={cat.categoryId} style={styles.catRow}>
                   <View style={styles.catIconWrap}>
-                    <Feather name={category.icon as any} size={20} color="#1d4ed8" />
+                    <Feather name={category.icon as any} size={20} color={Colors.deepNavy} />
                   </View>
                   <View style={styles.catInfo}>
                     <View style={styles.catLabelRow}>
@@ -191,7 +192,7 @@ export function AnalyticsScreen() {
                           styles.fillSmall,
                           {
                             width: `${cat.percentage}%`,
-                            backgroundColor: category.color || '#3b82f6',
+                            backgroundColor: category.color || Colors.deepNavy,
                           },
                         ]}
                       />
@@ -213,7 +214,7 @@ export function AnalyticsScreen() {
           ].map((row, idx, arr) => (
             <View key={row.label} style={[styles.statRow, idx === arr.length - 1 && { borderBottomWidth: 0 }]}>
               <Text style={styles.statLabel}>{row.label}</Text>
-              <Text style={[styles.statValue, row.isDanger && { color: '#ef4444' }]}>
+              <Text style={[styles.statValue, row.isDanger && { color: Colors.danger }]}>
                 {row.value}
               </Text>
             </View>
@@ -230,11 +231,11 @@ export function AnalyticsScreen() {
             {/* Year Selector */}
             <View style={styles.yearRow}>
               <Pressable onPress={() => setPickerYear(y => y - 1)} style={styles.yearBtn}>
-                <Feather name="chevron-left" size={24} color="#0a235c" />
+                <Feather name="chevron-left" size={24} color={Colors.deepNavy} />
               </Pressable>
               <Text style={styles.yearText}>{pickerYear}</Text>
               <Pressable onPress={() => setPickerYear(y => y + 1)} style={styles.yearBtn}>
-                <Feather name="chevron-right" size={24} color="#0a235c" />
+                <Feather name="chevron-right" size={24} color={Colors.deepNavy} />
               </Pressable>
             </View>
 
@@ -263,25 +264,25 @@ export function AnalyticsScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: '#f3f8ff',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 27,
+    paddingTop: 52,
     paddingBottom: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   monthButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: Colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
   monthButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   scroll: {
     paddingHorizontal: 16,
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     marginBottom: 20,
-    shadowColor: '#1d4ed8',
+    shadowColor: Colors.deepNavy,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   heroAmount: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#ffffff',
+    color: Colors.surface,
     marginBottom: 24,
   },
   heroRow: {
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
   },
   heroStatValue: {
     fontSize: 16,
-    color: '#ffffff',
+    color: Colors.surface,
     fontWeight: '800',
   },
   heroDivider: {
@@ -353,11 +354,11 @@ const styles = StyleSheet.create({
 
   // ── Base Card
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#cbd5e1',
+    shadowColor: Colors.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -366,12 +367,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
     marginBottom: 16,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#94a3b8',
+    color: Colors.textMuted,
     paddingVertical: 16,
     fontSize: 13,
     fontWeight: '600',
@@ -401,12 +402,12 @@ const styles = StyleSheet.create({
   },
   barLabel: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '700',
   },
   barValue: {
     fontSize: 10,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '800',
   },
 
@@ -419,17 +420,17 @@ const styles = StyleSheet.create({
   },
   budgetLabel: {
     fontSize: 13,
-    color: '#64748b',
+    color: Colors.textMuted,
     fontWeight: '700',
   },
   budgetValue: {
     fontSize: 13,
-    color: '#0a235c',
+    color: Colors.deepNavy,
     fontWeight: '800',
   },
   track: {
     height: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     borderRadius: 6,
     overflow: 'hidden',
     width: '100%',
@@ -445,7 +446,7 @@ const styles = StyleSheet.create({
   },
   budgetMeta: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '700',
   },
 
@@ -477,21 +478,21 @@ const styles = StyleSheet.create({
   catName: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   catAmount: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   catPercent: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: Colors.textMuted,
     fontWeight: '600',
   },
   trackSmall: {
     height: 6,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     borderRadius: 3,
     overflow: 'hidden',
     width: '100%',
@@ -507,17 +508,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.borderLight,
   },
   statLabel: {
     fontSize: 13,
-    color: '#64748b',
+    color: Colors.textMuted,
     fontWeight: '700',
   },
   statValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
 
   // ── Modal
@@ -529,7 +530,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 24,
     width: '100%',
@@ -547,13 +548,13 @@ const styles = StyleSheet.create({
   },
   yearBtn: {
     padding: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     borderRadius: 12,
   },
   yearText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0a235c',
+    color: Colors.deepNavy,
   },
   monthGrid: {
     flexDirection: 'row',
@@ -564,20 +565,20 @@ const styles = StyleSheet.create({
   monthBox: {
     width: '30%',
     aspectRatio: 1.5,
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceAlt,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthBoxSelected: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: Colors.deepNavy,
   },
   monthBoxText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#64748b',
+    color: Colors.textMuted,
   },
   monthBoxTextSelected: {
-    color: '#ffffff',
+    color: Colors.surface,
   },
 });

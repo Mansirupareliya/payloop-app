@@ -97,16 +97,17 @@ export interface CategorySpending {
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
 export type AuthStackParamList = {
+  Landing: undefined;
   Login: undefined;
   Signup: undefined;
   Congratulations: undefined;
 };
 
 export type RootStackParamList = {
-  Onboarding: undefined;
   MainTabs: undefined;
   AddBill: { billId?: string };
   BillDetail: { billId: string };
+  History: undefined;
 };
 
 export type BottomTabParamList = {

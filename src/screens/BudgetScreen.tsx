@@ -140,7 +140,7 @@ export function BudgetScreen() {
           })}
         </Card>
 
-        <View style={{ height: 90 }} />
+        <View style={{ height: 140 }} />
       </ScrollView>
     </View>
   );
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
+    paddingTop: 52,
     paddingBottom: Spacing.md,
   },
   title: {

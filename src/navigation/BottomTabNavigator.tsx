@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -12,153 +13,168 @@ import { BottomTabParamList } from '../types';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
-function TabIcon({ iconName, label, focused }: { iconName: keyof typeof Feather.glyphMap; label: string; focused: boolean }) {
+const TABS = [
+  { name: 'Home',      icon: 'home'       as const, label: 'Home'      },
+  { name: 'Bills',     icon: 'file-text'  as const, label: 'Bills'     },
+  { name: 'Calendar',  icon: 'plus'       as const, label: 'Add'       },
+  { name: 'Analytics', icon: 'bar-chart-2'as const, label: 'Analytics' },
+  { name: 'Profile',   icon: 'user'       as const, label: 'More'      },
+];
+
+function CustomTabBar({ state, navigation: tabNav }: any) {
+  const rootNav = useNavigation();
+
   return (
-    <View style={tabStyles.iconWrap}>
-      <Feather 
-        name={iconName} 
-        size={22} 
-        color={focused ? '#1e3a8a' : '#94a3b8'} 
-      />
-      <Text style={[tabStyles.label, focused && tabStyles.labelFocused]}>{label}</Text>
+    <View style={styles.barWrapper} pointerEvents="box-none">
+      <View style={styles.glassBar}>
+        {state.routes.map((route: any, index: number) => {
+            const focused   = state.index === index;
+            const isAdd     = route.name === 'Calendar';
+            const tab       = TABS[index];
+
+            const onPress = () => {
+              if (isAdd) {
+                (rootNav as any).navigate('AddBill', {});
+                return;
+              }
+              const event = tabNav.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) tabNav.navigate(route.name);
+            };
+
+            if (isAdd) {
+              return (
+                <Pressable key={route.key} onPress={onPress} style={styles.addWrap}>
+                  <View style={styles.addBtn}>
+                    <Feather name="plus" size={22} color={Colors.deepNavy} />
+                  </View>
+                  <Text style={styles.addLabel}>Add</Text>
+                </Pressable>
+              );
+            }
+
+            return (
+              <Pressable
+                key={route.key}
+                onPress={onPress}
+                style={styles.tabItem}
+              >
+                <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+                  <Feather
+                    name={tab.icon}
+                    size={20}
+                    color={focused ? Colors.deepNavy : Colors.textMuted}
+                  />
+                </View>
+                <Text style={[styles.label, focused && styles.labelActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+      </View>
     </View>
   );
 }
 
-const tabStyles = StyleSheet.create({
-  iconWrap: {
-    alignItems: 'center',
-    paddingTop: 8,
-    gap: 4,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  labelFocused: {
-    color: '#1e3a8a',
-    fontWeight: '700',
-  },
-  floatingButtonContainer: {
-    alignItems: 'center',
-    
-  },
-  floatingButton: {
-    top: -16,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#1d4ed8', // Bright blue
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1d4ed8',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-    marginBottom: 0,
-  },
-  dashIcon: {
-    width: 12,
-    height: 3,
-    marginTop: -8,
-    backgroundColor: '#cbd5e1',
-    borderRadius: 2,
-    marginBottom: 4,
-  },
-  floatingLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94a3b8',
-  }
-});
-
-import { useNavigation } from '@react-navigation/native';
-
 export function BottomTabNavigator() {
-  const navigation = useNavigation();
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 0,
-          height: 85,
-          paddingBottom: 24,
-          paddingTop: 8,
-          elevation: 10,
-          shadowColor: '#cbd5e1',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          position: 'absolute',
-        },
-      }}
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon iconName="home" label="Home" focused={focused} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Bills"
-        component={BillsScreen}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon iconName="file-text" label="Bills" focused={focused} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <View style={tabStyles.floatingButtonContainer}>
-              <Pressable 
-                style={tabStyles.floatingButton}
-                onPress={(e: any) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  (navigation as any).navigate('AddBill');
-                }}
-              >
-                <Feather name="plus" size={24} color="#ffffff" />
-              </Pressable>
-              <View style={tabStyles.dashIcon} />
-              <Text style={[tabStyles.floatingLabel, focused && tabStyles.labelFocused]}>Calendar</Text>
-            </View>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Analytics"
-        component={AnalyticsScreen}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon iconName="bar-chart-2" label="Analytics" focused={focused} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={MoreStack}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon iconName="user" label="Profile" focused={focused} />
-          ),
-        }}
-      />
+      <Tab.Screen name="Home"      component={HomeScreen}    />
+      <Tab.Screen name="Bills"     component={BillsScreen}   />
+      <Tab.Screen name="Calendar"  component={CalendarScreen} />
+      <Tab.Screen name="Analytics" component={AnalyticsScreen}/>
+      <Tab.Screen name="Profile"   component={MoreStack}      />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  barWrapper: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    borderRadius: 32,
+    overflow: 'hidden',
+    // Glass shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 20,
+  },
+  glassBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+    overflow: 'hidden',
+  },
+
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 4,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWrapActive: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  labelActive: {
+    color: Colors.deepNavy,
+    fontWeight: '700',
+  },
+
+  // Center Add button
+  addWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 4,
+  },
+  addBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+    marginTop: -10,
+  },
+  addLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
+});

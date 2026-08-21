@@ -1,26 +1,20 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  StatusBar,
-  Dimensions,
+  View, Text, ScrollView, StyleSheet, Pressable,
+  TextInput, StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
 import { useBillStore } from '../store/billStore';
 import { BillCard } from '../components/bills/BillCard';
+import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
 import { isOverdue } from '../utils/dateUtils';
 
 type NavProp = StackNavigationProp<RootStackParamList>;
-
 type FilterTab = 'All' | 'Paid' | 'Pending' | 'Overdue';
-const FILTER_TABS: FilterTab[] = ['All', 'Paid', 'Pending', 'Overdue'];
+const FILTER_TABS: FilterTab[] = ['All', 'Pending', 'Paid', 'Overdue'];
 
 export function BillsScreen() {
   const navigation = useNavigation<NavProp>();
@@ -31,7 +25,6 @@ export function BillsScreen() {
   const filtered = bills.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(query.toLowerCase());
     if (!matchesSearch) return false;
-
     switch (activeTab) {
       case 'Pending': return !b.isPaid && !isOverdue(b.dueDate, b.isPaid);
       case 'Overdue': return !b.isPaid && isOverdue(b.dueDate, b.isPaid);
@@ -42,59 +35,55 @@ export function BillsScreen() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f3f8ff" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
       <View style={styles.header}>
-        <Pressable style={styles.headerIcon} onPress={() => (navigation as any).navigate('MainTabs')}>
-          <Feather name="chevron-left" size={24} color="#1e293b" />
-        </Pressable>
         <Text style={styles.title}>My Bills</Text>
-        <Pressable style={styles.headerIcon} onPress={() => (navigation as any).navigate('MainTabs', { screen: 'Profile' })}>
-          <Feather name="settings" size={22} color="#1e293b" />
+        <Pressable style={styles.iconBtn} onPress={() => navigation.navigate('AddBill', {})}>
+          <Feather name="plus" size={20} color={Colors.surface} />
         </Pressable>
       </View>
 
-      {/* ── Search ── */}
+      {/* Search */}
       <View style={styles.searchRow}>
-        <Feather name="search" size={18} color="#94a3b8" style={styles.searchIcon} />
+        <Feather name="search" size={16} color={Colors.textMuted} style={{ marginRight: 10 }} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search bills..."
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={Colors.textMuted}
           value={query}
           onChangeText={setQuery}
         />
+        {query.length > 0 && (
+          <Pressable onPress={() => setQuery('')}>
+            <Feather name="x" size={16} color={Colors.textMuted} />
+          </Pressable>
+        )}
       </View>
 
-      {/* ── Filter Tabs ── */}
-      <View style={styles.tabContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
-          {FILTER_TABS.map(tab => {
-            const isActive = activeTab === tab;
-            return (
-              <Pressable
-                key={tab}
-                style={[styles.tab, isActive && styles.tabActive]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                  {tab}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* Filter Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
+        {FILTER_TABS.map(tab => {
+          const active = activeTab === tab;
+          return (
+            <Pressable
+              key={tab}
+              style={[styles.tab, active && styles.tabActive]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
-      {/* ── Bill List ── */}
-      <ScrollView
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Bill List */}
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
-          <View style={styles.emptyState}>
+          <View style={styles.empty}>
+            <Feather name="inbox" size={36} color={Colors.border} />
             <Text style={styles.emptyText}>
-              {query ? 'No results found' : 'No bills found for this filter.'}
+              {query ? 'No results found' : 'No bills in this category'}
             </Text>
           </View>
         ) : (
@@ -106,97 +95,47 @@ export function BillsScreen() {
             />
           ))
         )}
-        <View style={{ height: 120 }} />
+        <View style={{ height: 140 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shell: {
-    flex: 1,
-    backgroundColor: '#f3f8ff',
-  },
+  shell: { flex: 1, backgroundColor: Colors.background },
 
-  // ── Header
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 17,
-    paddingBottom: 12,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 24, paddingTop: 52, paddingBottom: 10,
   },
-  headerIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#142449ff',
+  title: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  iconBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: Colors.deepNavy,
+    alignItems: 'center', justifyContent: 'center',
   },
 
-  // ── Search
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e1e5eaff',
-    marginHorizontal: 24,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-    marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.surface, marginHorizontal: 24,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8,
+    marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#0f172a',
-    fontWeight: '500',
-  },
+  searchInput: { flex: 1, fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
 
-  // ── Filter Tabs
-  tabContainer: {
-    marginBottom: 14,
-  },
-  tabRow: {
-    paddingHorizontal: 24,
-    gap: 5,
-  },
+  tabRow: { paddingHorizontal: 24, gap: 8, marginBottom: 8, alignItems: 'center' },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 14, paddingVertical: 5,
+    borderRadius: 20, backgroundColor: Colors.surface,
+    borderWidth: 1.5, borderColor: Colors.border,
   },
-  tabActive: {
-    backgroundColor: '#0a235c', // Dark blue from image
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  tabTextActive: {
-    color: '#ffffff',
-  },
+  tabActive: { backgroundColor: Colors.deepNavy, borderColor: Colors.deepNavy },
+  tabText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  tabTextActive: { color: Colors.surface },
 
-  // ── List
-  list: {
-    paddingHorizontal: 24,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 40,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#94a3b8',
-    fontWeight: '500',
-  },
+  list: { paddingHorizontal: 16, paddingTop: 4 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  emptyText: { fontSize: 14, color: Colors.textMuted, fontWeight: '500' },
 });

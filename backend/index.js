@@ -5,6 +5,7 @@ const cors = require('cors');
 const authRouter     = require('./routes/auth');
 const billsRouter    = require('./routes/bills');
 const paymentsRouter = require('./routes/payments');
+const scanRouter     = require('./routes/scan');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.use((req, _res, next) => {
 app.use('/api/auth',     authRouter);
 app.use('/api/bills',    billsRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api',          scanRouter);
 
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
