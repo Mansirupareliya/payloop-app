@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const requireAuth = require('../middleware/auth');
 
-// ─── Helper: convert DB row → app format ────────────────────────────────────
+router.use(requireAuth);
+
 function rowToPayment(row) {
   return {
     id: row.id,
@@ -21,7 +23,8 @@ function rowToPayment(row) {
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM payments ORDER BY paid_date DESC'
+      'SELECT * FROM payments WHERE user_id = $1 ORDER BY paid_date DESC',
+      [req.userId]
     );
     res.json(result.rows.map(rowToPayment));
   } catch (err) {

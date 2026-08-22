@@ -20,6 +20,7 @@ import { usePhotoStore } from '../store/photoStore';
 import { getCategoryById } from '../constants/categories';
 import { formatCurrency } from '../utils/currencyUtils';
 import { formatDate, isOverdue, isDueToday } from '../utils/dateUtils';
+import { notifyPaymentConfirmed } from '../utils/pushNotifications';
 import { RootStackParamList, PaymentMethod, BillStatus } from '../types';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Colors } from '../constants/colors';
@@ -78,14 +79,21 @@ export function BillDetailScreen() {
     statusText = 'Due Today';
   }
 
-  function handleMarkPaid() {
-    markAsPaid(bill!.id, {
+  async function handleMarkPaid() {
+    const billName   = bill!.name;
+    const billAmount = bill!.amount;
+
+    await markAsPaid(bill!.id, {
       paymentMethod: payMethod,
       transactionId: transId.trim() || undefined,
       notes: payNotes.trim() || undefined,
     });
+
     setShowPayModal(false);
     setShowSuccess(true);
+
+    notifyPaymentConfirmed(billName, billAmount, payMethod);
+
     setTimeout(() => {
       setShowSuccess(false);
       navigation.goBack();

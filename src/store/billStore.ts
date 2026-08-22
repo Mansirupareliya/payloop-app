@@ -113,18 +113,13 @@ export const useBillStore = create<BillState>()((set, get) => ({
   markAsPaid: async (id, details) => {
     set({ loading: true, error: null });
     try {
-      const { bill: updatedBill, payment, nextBill } = await billsApi.markAsPaid(id, details);
+      const { bill: updatedBill, payment } = await billsApi.markAsPaid(id, details);
 
-      set(s => {
-        let bills = s.bills.map(b => (b.id === id ? updatedBill : b));
-        // If a new recurring bill was auto-created, add it to the top
-        if (nextBill) bills = [nextBill, ...bills];
-        return {
-          bills,
-          payments: [payment, ...s.payments],
-          loading: false,
-        };
-      });
+      set(s => ({
+        bills: s.bills.map(b => (b.id === id ? updatedBill : b)),
+        payments: [payment, ...s.payments],
+        loading: false,
+      }));
     } catch (err: any) {
       console.error('markAsPaid error:', err);
       set({ error: err.message ?? 'Failed to mark as paid', loading: false });

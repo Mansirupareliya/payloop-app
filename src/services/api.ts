@@ -50,6 +50,8 @@ export const authApi = {
     body: JSON.stringify(details),
   }),
   me: () => request<any>('/auth/me'),
+  updateProfile: (data: { phone: string }) =>
+    request<any>('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // ─── Bills API ───────────────────────────────────────────────────────────────
@@ -70,4 +72,14 @@ export const billsApi = {
 
 export const paymentsApi = {
   getAll: () => request<Payment[]>('/payments'),
+};
+
+// ─── SMS API ──────────────────────────────────────────────────────────────────
+
+export const smsApi = {
+  send: (to: string, message: string) =>
+    request<{ success: boolean }>('/sms/send', {
+      method: 'POST',
+      body: JSON.stringify({ to, message }),
+    }),
 };

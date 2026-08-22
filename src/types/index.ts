@@ -121,8 +121,8 @@ export type BottomTabParamList = {
 export type MoreStackParamList = {
   MoreMenu: undefined;
   Analytics: undefined;
-  Budget: undefined;
   History: undefined;
   Subscriptions: undefined;
   Settings: undefined;
+  Terms: undefined;
 };

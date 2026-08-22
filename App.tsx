@@ -12,6 +12,8 @@ import { SplashScreen } from './src/screens/SplashScreen';
 import { RootStackParamList } from './src/types';
 import { useAuthStore } from './src/store/authStore';
 import { usePhotoStore } from './src/store/photoStore';
+import { useBillStore } from './src/store/billStore';
+import { checkAndNotifyBillReminders } from './src/utils/pushNotifications';
 import { Colors } from './src/constants/colors';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -19,12 +21,20 @@ const Stack = createStackNavigator<RootStackParamList>();
 export default function App() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const { loadPhotos } = usePhotoStore();
+  const { bills } = useBillStore();
   const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     checkAuth();
     loadPhotos();
   }, []);
+
+  // Check bill reminders and send push notifications on app open
+  useEffect(() => {
+    if (isAuthenticated && bills.length > 0) {
+      checkAndNotifyBillReminders(bills).catch(() => {});
+    }
+  }, [isAuthenticated, bills.length]);
 
   // Show animated splash until animation completes (≥3.6s)
   // Auth check (<1s) finishes well within that window

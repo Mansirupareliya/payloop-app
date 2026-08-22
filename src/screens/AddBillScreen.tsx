@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   scanPreview: { height: 180, position: 'relative' },
   scanImage: { width: '100%', height: '100%' },
   scanOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10,10,10,0.6)',
     alignItems: 'center', justifyContent: 'center', gap: 10,
   },

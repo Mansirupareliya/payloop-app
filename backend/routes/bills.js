@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const requireAuth = require('../middleware/auth');
+
+router.use(requireAuth);
 
 // ─── Helper: convert DB row → app format ────────────────────────────────────
 function rowToBill(row) {
@@ -24,11 +27,26 @@ function rowToBill(row) {
   };
 }
 
+function rowToPayment(row) {
+  return {
+    id: row.id,
+    billId: row.bill_id,
+    billName: row.bill_name,
+    categoryId: row.category_id,
+    amount: parseFloat(row.amount),
+    paidDate: row.paid_date,
+    paymentMethod: row.payment_method,
+    transactionId: row.transaction_id ?? undefined,
+    notes: row.notes ?? undefined,
+  };
+}
+
 // ─── GET /api/bills ──────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM bills ORDER BY due_date ASC'
+      'SELECT * FROM bills WHERE user_id = $1 ORDER BY due_date ASC',
+      [req.userId]
     );
     res.json(result.rows.map(rowToBill));
   } catch (err) {
@@ -52,11 +70,12 @@ router.post('/', async (req, res) => {
     const id = uuidv4();
     const result = await pool.query(
       `INSERT INTO bills
-        (id, name, category_id, amount, due_date, frequency, auto_repeat, reminders, payment_method, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        (id, user_id, name, category_id, amount, due_date, frequency, auto_repeat, reminders, payment_method, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         id,
+        req.userId,
         name,
         categoryId,
         amount,
@@ -70,7 +89,6 @@ router.post('/', async (req, res) => {
     );
     res.status(201).json(rowToBill(result.rows[0]));
   } catch (err) {
-
     console.error('POST /bills error:', err);
     res.status(500).json({ error: 'Failed to create bill' });
   }
@@ -87,19 +105,20 @@ router.put('/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE bills SET
-        name            = COALESCE($2, name),
-        category_id     = COALESCE($3, category_id),
-        amount          = COALESCE($4, amount),
-        due_date        = COALESCE($5, due_date),
-        frequency       = COALESCE($6, frequency),
-        auto_repeat     = COALESCE($7, auto_repeat),
-        reminders       = COALESCE($8, reminders),
-        payment_method  = COALESCE($9, payment_method),
-        notes           = COALESCE($10, notes)
-       WHERE id = $1
+        name            = COALESCE($3, name),
+        category_id     = COALESCE($4, category_id),
+        amount          = COALESCE($5, amount),
+        due_date        = COALESCE($6, due_date),
+        frequency       = COALESCE($7, frequency),
+        auto_repeat     = COALESCE($8, auto_repeat),
+        reminders       = COALESCE($9, reminders),
+        payment_method  = COALESCE($10, payment_method),
+        notes           = COALESCE($11, notes)
+       WHERE id = $1 AND user_id = $2
        RETURNING *`,
       [
         id,
+        req.userId,
         name ?? null,
         categoryId ?? null,
         amount ?? null,
@@ -126,7 +145,10 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('DELETE FROM bills WHERE id = $1', [id]);
+    const result = await pool.query(
+      'DELETE FROM bills WHERE id = $1 AND user_id = $2',
+      [id, req.userId]
+    );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Bill not found' });
     }
@@ -138,8 +160,6 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ─── POST /api/bills/:id/pay ─────────────────────────────────────────────────
-// Mark a bill as paid and create a payment record.
-// If autoRepeat is true, also inserts the next recurring bill.
 router.post('/:id/pay', async (req, res) => {
   const { id } = req.params;
   const { paymentMethod, paidDate, transactionId, notes } = req.body;
@@ -152,8 +172,11 @@ router.post('/:id/pay', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // 1. Fetch the bill
-    const billResult = await client.query('SELECT * FROM bills WHERE id = $1', [id]);
+    // 1. Fetch the bill (scoped to this user)
+    const billResult = await client.query(
+      'SELECT * FROM bills WHERE id = $1 AND user_id = $2',
+      [id, req.userId]
+    );
     if (billResult.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Bill not found' });
@@ -168,14 +191,16 @@ router.post('/:id/pay', async (req, res) => {
       [id, resolvedPaidDate, transactionId ?? null, notes ?? null]
     );
 
-    // 3. Create a payment record
+    // 3. Create a payment record (with user_id)
     const paymentId = uuidv4();
     const paymentResult = await client.query(
-      `INSERT INTO payments (id, bill_id, bill_name, category_id, amount, paid_date, payment_method, transaction_id, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO payments
+        (id, user_id, bill_id, bill_name, category_id, amount, paid_date, payment_method, transaction_id, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         paymentId,
+        req.userId,
         id,
         bill.name,
         bill.category_id,
@@ -187,39 +212,12 @@ router.post('/:id/pay', async (req, res) => {
       ]
     );
 
-    // 4. Auto-create next recurring bill
-    let nextBill = null;
-    const nonRecurring = ['One time', 'Custom'];
-    if (bill.auto_repeat && !nonRecurring.includes(bill.frequency)) {
-      const nextDue = getNextDueDate(bill.due_date, bill.frequency);
-      const nextId = uuidv4();
-      const nextResult = await client.query(
-        `INSERT INTO bills
-          (id, name, category_id, amount, due_date, frequency, auto_repeat, reminders, payment_method, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING *`,
-        [
-          nextId,
-          bill.name,
-          bill.category_id,
-          bill.amount,
-          nextDue,
-          bill.frequency,
-          bill.auto_repeat,
-          bill.reminders,
-          bill.payment_method,
-          bill.notes,
-        ]
-      );
-      nextBill = rowToBill(nextResult.rows[0]);
-    }
-
     await client.query('COMMIT');
 
     res.json({
       bill: rowToBill({ ...bill, is_paid: true, paid_date: resolvedPaidDate }),
       payment: rowToPayment(paymentResult.rows[0]),
-      nextBill,
+      nextBill: null,
     });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -230,34 +228,5 @@ router.post('/:id/pay', async (req, res) => {
   }
 });
 
-// ─── Helper: next due date ───────────────────────────────────────────────────
-function getNextDueDate(dueDateStr, frequency) {
-  const date = new Date(dueDateStr);
-  switch (frequency) {
-    case 'Daily': date.setDate(date.getDate() + 1); break;
-    case 'Weekly': date.setDate(date.getDate() + 7); break;
-    case 'Monthly': date.setMonth(date.getMonth() + 1); break;
-    case 'Quarterly': date.setMonth(date.getMonth() + 3); break;
-    case 'Half-yearly': date.setMonth(date.getMonth() + 6); break;
-    case 'Yearly': date.setFullYear(date.getFullYear() + 1); break;
-    default: date.setMonth(date.getMonth() + 1);
-  }
-  return date.toISOString();
-}
-
-// ─── Helper: convert payment row → app format ────────────────────────────────
-function rowToPayment(row) {
-  return {
-    id: row.id,
-    billId: row.bill_id,
-    billName: row.bill_name,
-    categoryId: row.category_id,
-    amount: parseFloat(row.amount),
-    paidDate: row.paid_date,
-    paymentMethod: row.payment_method,
-    transactionId: row.transaction_id ?? undefined,
-    notes: row.notes ?? undefined,
-  };
-}
 
 module.exports = router;

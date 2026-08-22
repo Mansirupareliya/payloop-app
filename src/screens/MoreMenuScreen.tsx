@@ -14,10 +14,10 @@ type NavProp = StackNavigationProp<MoreStackParamList>;
 
 const MENU_ITEMS = [
   { icon: 'bar-chart-2', label: 'Analytics',       subtitle: 'Spending charts & insights',       screen: 'Analytics' as const },
-  { icon: 'target',      label: 'Budget',           subtitle: 'Set monthly & category limits',    screen: 'Budget' as const },
   { icon: 'clock',       label: 'Payment History',  subtitle: 'All past payments',                screen: 'History' as const },
   { icon: 'repeat',      label: 'Subscriptions',    subtitle: 'OTT, internet & recurring services',screen: 'Subscriptions' as const },
   { icon: 'settings',    label: 'Settings',         subtitle: 'Profile, notifications & more',    screen: 'Settings' as const },
+  { icon: 'file-text',  label: 'Terms & Conditions', subtitle: 'Usage policy & legal information', screen: 'Terms' as const },
 ];
 
 export function MoreMenuScreen() {

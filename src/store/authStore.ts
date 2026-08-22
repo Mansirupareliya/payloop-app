@@ -19,6 +19,7 @@ interface AuthState {
   signup: (email: string, password: string, phone?: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  updatePhone: (phone: string) => Promise<void>;
   hasCompletedOnboarding: boolean;
   completeOnboarding: () => void;
 }
@@ -58,6 +59,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => set({ isAuthenticated: false, user: null, token: null }),
+
+      updatePhone: async (phone) => {
+        try {
+          const { user } = await authApi.updateProfile({ phone });
+          set(s => ({ user: { ...s.user!, phone: user.phone } }));
+        } catch (error) {
+          console.error('updatePhone failed:', error);
+          throw error;
+        }
+      },
 
       checkAuth: async () => {
         const { token } = get();

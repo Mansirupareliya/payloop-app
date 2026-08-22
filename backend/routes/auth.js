@@ -103,4 +103,25 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// UPDATE PHONE
+router.put('/profile', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'phone is required' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const result = await pool.query(
+      'UPDATE users SET phone = $1 WHERE id = $2 RETURNING id, email, phone',
+      [phone, decoded.id]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
